@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TubeShelf 訂閱更新測試</title>
+    <title>Chanlume 訂閱更新測試</title>
     <style>
       body { margin:0; color:#f1f1f1; background:#0f0f0f; font:14px Arial,sans-serif; }
       main { width:min(900px,calc(100% - 40px)); margin:auto; padding:40px 0; }
@@ -21,7 +21,7 @@
       window.savedState = null;
       window.scanMessages = [];
       const initialState = {version:1,channels:{"/@gone":{id:"/@gone",name:"Gone"}},groups:[{id:"learning",name:"學習",icon:"book",color:"#7c5cff",channelIds:["/@gone"]}],settings:{hideShorts:false,hideWatched:false,compactMode:false}};
-      window.chrome={storage:{local:{get:async()=>({tubeShelfState:initialState}),set:async(value)=>{if(value.tubeShelfState)window.savedState=value.tubeShelfState;}},onChanged:{addListener:()=>{}}},runtime:{sendMessage:async(message)=>{window.scanMessages.push(message);return{ok:true};},onMessage:{addListener:()=>{}}}};
+      window.chrome={storage:{local:{get:async()=>({chanlumeState:initialState}),set:async(value)=>{if(value.chanlumeState)window.savedState=value.chanlumeState;}},onChanged:{addListener:()=>{}}},runtime:{sendMessage:async(message)=>{window.scanMessages.push(message);return{ok:true};},onMessage:{addListener:()=>{}}}};
     </script>
     <script src="/extension/shared.js"></script><script src="/extension/content/content.js"></script>
   </body>

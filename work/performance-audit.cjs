@@ -4,7 +4,7 @@ const path = require('node:path');
 const http = require('node:http');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
-const { chromium } = require(path.join(process.env.TUBESHELF_NODE_MODULES, 'playwright'));
+const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playwright'));
 const root = path.resolve(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8').replace(/\r\n/g, '\n');
 const shared = read('work/performance-baseline/shared.js');
@@ -26,12 +26,12 @@ const setup = `
   const groups = Array.from({length:10}, (_, i) => ({id: 'group'+i, name:'Group '+i, color:'#7c5cff',
     channelIds:Object.keys(channels).filter((_, j) => j%10 === i)}));
   globalThis.__state = {version:14, revision:1, channels, groups, settings:{language:'en', hideShorts:false, blockHome:false, disableAutoplay:false}};
-  globalThis.chrome = {storage:{local:{get:async()=>({tubeShelfState:__state})},onChanged:{addListener(){}}},runtime:{onMessage:{addListener(){}},sendMessage:async()=>({ok:true})}};
+  globalThis.chrome = {storage:{local:{get:async()=>({chanlumeState:__state})},onChanged:{addListener(){}}},runtime:{onMessage:{addListener(){}},sendMessage:async()=>({ok:true})}};
   document.querySelector('#feed').innerHTML = Array.from({length:200}, (_, i) =>
     '<ytd-rich-item-renderer><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a href="/@channel'+i+'">Channel '+i+'</a></div></yt-content-metadata-view-model></ytd-rich-item-renderer>').join('');
   globalThis.__calls = 0;
-  const original = TubeShelfCore.groupForChannel;
-  TubeShelfCore.groupForChannel = (...args) => { __calls++; return original(...args); };
+  const original = ChanlumeCore.groupForChannel;
+  ChanlumeCore.groupForChannel = (...args) => { __calls++; return original(...args); };
 `;
 const server = http.createServer((req, res) => {
   const mode = req.url.includes('candidate') ? 'candidate' : 'baseline';
@@ -47,8 +47,8 @@ const server = http.createServer((req, res) => {
       const page = await browser.newPage();
       page.on('pageerror', error => console.error('PAGE ERROR', error.message));
       await page.goto(`http://127.0.0.1:${server.address().port}/${mode}`);
-      console.log(mode, await page.evaluate(() => ({url:location.href, cards:document.querySelectorAll('ytd-rich-item-renderer').length, badges:document.querySelectorAll('.tubeshelf-card-classification').length, core:!!globalThis.TubeShelfCore, audit:!!globalThis.__audit})));
-      await page.waitForFunction(() => document.querySelectorAll('.tubeshelf-card-classification').length === 200);
+      console.log(mode, await page.evaluate(() => ({url:location.href, cards:document.querySelectorAll('ytd-rich-item-renderer').length, badges:document.querySelectorAll('.chanlume-card-classification').length, core:!!globalThis.ChanlumeCore, audit:!!globalThis.__audit})));
+      await page.waitForFunction(() => document.querySelectorAll('.chanlume-card-classification').length === 200);
       await page.waitForTimeout(400);
       const cdp = await page.context().newCDPSession(page);
       await cdp.send('HeapProfiler.collectGarbage');
@@ -78,7 +78,7 @@ const server = http.createServer((req, res) => {
       if(mode==='candidate') assert.notEqual(source,bridge);
       await page.addScriptTag({content:source});
       if(mode==='candidate') {
-        await page.evaluate(() => window.postMessage({source:'tubeshelf-identity-bridge',type:'SET_ENABLED',enabled:true},location.origin));
+        await page.evaluate(() => window.postMessage({source:'chanlume-identity-bridge',type:'SET_ENABLED',enabled:true},location.origin));
         await page.waitForTimeout(50);
       }
       await page.evaluate(() => { history.replaceState({}, '', '/watch?v=synthetic'); window.ytInitialData={}; document.dispatchEvent(new Event('yt-navigate-finish')); });

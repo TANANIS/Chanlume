@@ -16,4 +16,4 @@ http.createServer((request, response) => {
     response.writeHead(200, { "Content-Type": types[path.extname(target)] || "application/octet-stream", "Cache-Control": "no-store" });
     response.end(data);
   });
-}).listen(8765, "127.0.0.1", () => process.stdout.write("TubeShelf preview: http://127.0.0.1:8765\n"));
+}).listen(18766, "127.0.0.1", () => process.stdout.write("Chanlume preview: http://127.0.0.1:18766\n"));

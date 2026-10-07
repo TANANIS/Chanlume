@@ -2,6 +2,21 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const Core = require("../extension/shared.js");
 
+test("legacy bookmarks map to Chanlume without changing group values or unrelated parameters", () => {
+  assert.equal(Core.canonicalHash('#tubeshelf-group=my-tubeshelf-group&other=1'), '#chanlume-group=my-tubeshelf-group&other=1');
+  assert.equal(Core.canonicalHash('#tubeshelf-view=favorites'), '#chanlume-view=favorites');
+  assert.equal(Core.canonicalHash('#tubeshelf-update-subscriptions'), '#chanlume-update-subscriptions');
+  assert.equal(Core.canonicalHash('#chanlume-group=all'), '#chanlume-group=all');
+});
+
+test("read-only storage fallback preserves a library while the background migration is pending", async () => {
+  const legacy = { revision: 7 };
+  const values = await Core.readStoredValues({ get: async () => ({ tubeShelfState: legacy }) }, 'chanlumeState');
+  assert.equal(values.chanlumeState, legacy);
+  const explicit = await Core.readStoredValues({ get: async () => ({ chanlumeYouTubeApiKey: '', tubeShelfYouTubeApiKey: 'old' }) }, 'chanlumeYouTubeApiKey');
+  assert.equal(explicit.chanlumeYouTubeApiKey, '');
+});
+
 test("direct classification files every requested channel once and preserves manual choices", () => {
   const state = Core.normalizeState({settings:{language:'en'}, channels:{'/@weak':{name:'Creator',description:'Music'},'/@mixed':{name:'Mixed',description:'Music piano cooking recipe'},'/@unknown':{name:'Unknown'},'/@filed':{name:'Filed',description:'Cooking'},'/@new':{name:'New'}}, groups:[{id:'custom',name:'Personal',channelIds:['/@filed']},{id:'misc',name:'其他',channelIds:[]}],manualLabels:{'/@filed':['custom']}});
   const operation = {type:'auto-classify',payload:{channelIds:['/@weak','/@mixed','/@unknown','/@filed','/@gone']}};
@@ -66,7 +81,7 @@ test("global power defaults on and preserves library and preferences across togg
 test("disabled integration rejects late automatic subscription and scan commits", () => {
   const off = Core.normalizeState({settings:{enabled:false}});
   for (const type of ['set-subscription', 'coalesce-channel-identities', 'reconcile-subscription-scan']) {
-    assert.throws(() => Core.applyStateOperation(off, {type, payload:{channels:[]}}), {code:'TUBESHELF_DISABLED'});
+    assert.throws(() => Core.applyStateOperation(off, {type, payload:{channels:[]}}), {code:'CHANLUME_DISABLED'});
   }
 });
 
@@ -80,7 +95,7 @@ test("YouTube page kinds keep recommendations separate from subscriptions", () =
   assert.equal(Core.youtubePageKind("https://www.youtube.com/"), "home");
   assert.equal(Core.youtubePageKind("/feed/subscriptions?flow=2"), "subscriptions");
   assert.equal(Core.youtubePageKind("https://www.youtube.com/watch?v=123"), "other");
-  assert.equal(Core.subscriptionGroupUrl("學習"), "https://www.youtube.com/feed/subscriptions#tubeshelf-group=%E5%AD%B8%E7%BF%92");
+  assert.equal(Core.subscriptionGroupUrl("學習"), "https://www.youtube.com/feed/subscriptions#chanlume-group=%E5%AD%B8%E7%BF%92");
 });
 
 test("new distraction controls default off and migrate into saved state", () => {
@@ -165,7 +180,7 @@ test("hiding the watch-page secondary column defaults autoplay to off without co
 });
 
 test("blocked homepage and Shorts redirect directly to subscriptions", () => {
-  const target = "https://www.youtube.com/feed/subscriptions#tubeshelf-group=all";
+  const target = "https://www.youtube.com/feed/subscriptions#chanlume-group=all";
   assert.equal(Core.blockedPageRedirect({ blockHome: true }, "https://www.youtube.com/"), target);
   assert.equal(Core.blockedPageRedirect({ blockHome: true }, "https://www.youtube.com/watch?v=1"), "");
   assert.equal(Core.blockedPageRedirect({ hideShorts: true }, "https://www.youtube.com/shorts/abc"), target);

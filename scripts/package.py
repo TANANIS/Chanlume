@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parent.parent
 source = root / "extension"
 mirror = root / "outputs" / "extension"
 version = json.loads((source / "manifest.json").read_text(encoding="utf-8"))["version"]
-archive = root / "outputs" / f"TubeShelf-{version}.zip"
+archive = root / "outputs" / f"Chanlume-{version}.zip"
 files = sorted(path.relative_to(source) for path in source.rglob("*") if path.is_file())
 existing = {path.relative_to(mirror) for path in mirror.rglob("*") if path.is_file()}
 extras = existing - set(files)

@@ -93,5 +93,5 @@ body { width: 460px; min-height: 0; }
 .power-button[aria-pressed="false"] { border-color: var(--line); background: var(--surface-2); color: #b4afbd; }
 .power-button:focus-visible { outline: 2px solid #aa98ff; outline-offset: 3px; }
 .power-button:disabled { opacity: .5; cursor: wait; }
-body.ts-paused .hero { opacity: .6; }
+body.cl-paused .hero { opacity: .6; }
 .group:disabled, .button:disabled { opacity: .4; cursor: default; }

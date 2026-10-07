@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TubeShelf 管理中心</title>
+    <title>Chanlume 管理中心</title>
     <link rel="stylesheet" href="dashboard.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark"><svg viewBox="0 0 24 24" width="23" height="23" fill="white"><path d="M5 5.8A2.8 2.8 0 0 1 7.8 3H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7.8A2.8 2.8 0 0 1 5 16.2V5.8Zm6 4.2v6l5-3-5-3Z"/></svg></div>
-          <div><strong>TubeShelf</strong><span>本機訂閱整理</span></div>
+          <div><strong>Chanlume</strong><span>本機訂閱整理</span></div>
         </div>
         <nav>
           <button class="nav-item active" data-view="library" type="button"><span>▦</span>我的書架</button>
@@ -85,10 +85,10 @@
               <label class="setting-row"><span><strong>關閉自動播放</strong><small>隱藏影片右側欄時會預設一併開啟，之後仍可單獨調整。</small></span><input type="checkbox" data-setting="disableAutoplay" /></label>
             </div></article>
             <article class="settings-card"><div><h2>訂閱內容畫面整理</h2><p>只套用在 YouTube 訂閱內容，不會拿來分類首頁推薦。</p></div><div class="setting-list"><label class="setting-row"><span><strong>隱藏已觀看影片</strong><small>支援 YouTube 新舊版縮圖觀看進度標記。</small></span><input type="checkbox" data-setting="hideWatched" /></label></div></article>
-            <article class="settings-card language-card"><div><h2>介面語言</h2><p>選擇 TubeShelf 的顯示語言。群組與頻道名稱不會被改寫。</p></div><label class="language-control"><span class="sr-only">介面語言</span><select id="language-select" aria-label="介面語言"><option value="zh-TW">繁體中文</option><option value="en">English</option></select></label></article>
+            <article class="settings-card language-card"><div><h2>介面語言</h2><p>選擇 Chanlume 的顯示語言。群組與頻道名稱不會被改寫。</p></div><label class="language-control"><span class="sr-only">介面語言</span><select id="language-select" aria-label="介面語言"><option value="zh-TW">繁體中文</option><option value="en">English</option></select></label></article>
             <article class="settings-card api-card"><div><h2>YouTube 官方分類（選用）</h2><p>填入自己的 YouTube Data API Key 後，自動整理會讀取公開頻道主題與近期影片類別。Key 只存在本機，不會放進 JSON 備份。</p><small id="youtube-api-status" class="api-status">尚未設定，仍會使用完整的本機字典。</small></div><div class="api-key-control"><input id="youtube-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="貼上 API Key" aria-label="YouTube Data API Key"><div><button id="save-youtube-api-key" class="button primary compact" type="button">儲存 Key</button><button id="clear-youtube-api-key" class="button ghost compact" type="button">清除</button></div></div></article>
             <article class="settings-card"><div><h2>備份與搬移</h2><p>匯出檔包含群組與頻道網址，不含觀看紀錄。</p></div><div class="backup-actions"><button id="export" class="button ghost" type="button">匯出 JSON</button><button id="import" class="button ghost" type="button">匯入 JSON</button><input id="import-file" type="file" accept="application/json" hidden /></div></article>
-            <article class="settings-card danger-card"><div><h2>重新開始</h2><p>清除 TubeShelf 儲存的頻道與群組，不會取消 YouTube 訂閱。</p></div><button id="reset" class="button danger" type="button">清除本機資料</button></article>
+            <article class="settings-card danger-card"><div><h2>重新開始</h2><p>清除 Chanlume 儲存的頻道與群組，不會取消 YouTube 訂閱。</p></div><button id="reset" class="button danger" type="button">清除本機資料</button></article>
           </div>
         </section>
       </main>

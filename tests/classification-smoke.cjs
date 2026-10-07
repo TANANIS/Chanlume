@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {chromium}=require(path.join(process.env.TUBESHELF_NODE_MODULES,'playwright'));
+const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright'));
 (async()=>{
   const browser=await chromium.launch({channel:'msedge',headless:true});
   try {
@@ -25,24 +25,24 @@ const {chromium}=require(path.join(process.env.TUBESHELF_NODE_MODULES,'playwrigh
         Object.values(state.channels).forEach(channel=>{channel.profileVersion=5;channel.profiledAt=Date.now();});
         globalThis.__state=()=>state;
         globalThis.__operations=[];
-        globalThis.__change=next=>{state=TubeShelfCore.normalizeState(next);localStorage.setItem('classification-fixture',JSON.stringify(state));listener?.({tubeShelfState:{newValue:state}},'local');};
-        globalThis.chrome={storage:{local:{get:async key=>({[key]:key==='tubeShelfState'?state:''})},onChanged:{addListener:fn=>listener=fn}},runtime:{sendMessage:async message=>{
-          if(message.type!=='TUBESHELF_MUTATE')return{ok:true};
+        globalThis.__change=next=>{state=ChanlumeCore.normalizeState(next);localStorage.setItem('classification-fixture',JSON.stringify(state));listener?.({chanlumeState:{newValue:state}},'local');};
+        globalThis.chrome={storage:{local:{get:async keys=>Object.fromEntries((Array.isArray(keys)?keys:[keys]).map(key=>[key,key==='chanlumeState'?state:undefined]))},onChanged:{addListener:fn=>listener=fn}},runtime:{sendMessage:async message=>{
+          if(message.type!=='CHANLUME_MUTATE')return{ok:true};
           __operations.push(message.operation.type);
           if(globalThis.__failSave && message.operation.type==='auto-classify')return{ok:false,error:'Fixture save failure'};
-          const next=TubeShelfCore.applyStateOperation(state,message.operation);next.revision=state.revision+1;__change(next);return{ok:true,state};
+          const next=ChanlumeCore.applyStateOperation(state,message.operation);next.revision=state.revision+1;__change(next);return{ok:true,state};
         }},tabs:{create:async()=>({id:1})}};
       },language);
-      await page.goto('http://127.0.0.1:8766/extension/dashboard/dashboard.html');
+      await page.goto('http://127.0.0.1:18766/extension/dashboard/dashboard.html');
       await page.evaluate(()=>{__failSave=true;});
       await page.locator('#auto-organize').click();
       await page.locator('#auto-retry').waitFor({state:'visible'});
       assert.equal(await page.locator('#auto-apply, #auto-results, #auto-start').count(),0);
       assert.ok((await page.locator('#auto-save-error').innerText()).length>0);
       assert.equal(await page.evaluate(()=>__state().groups.length),1);
-      assert.equal(await page.evaluate(()=>TubeShelfCore.unfiledChannelIds(__state()).length),4);
+      assert.equal(await page.evaluate(()=>ChanlumeCore.unfiledChannelIds(__state()).length),4);
       // Another tab manually files one channel before retry. It must win.
-      await page.evaluate(()=>{const next=TubeShelfCore.applyStateOperation(__state(),{type:'toggle-membership',payload:{groupId:'music-custom',channelId:'/@mixed',enabled:true}});next.revision++;__change(next);__failSave=false;});
+      await page.evaluate(()=>{const next=ChanlumeCore.applyStateOperation(__state(),{type:'toggle-membership',payload:{groupId:'music-custom',channelId:'/@mixed',enabled:true}});next.revision++;__change(next);__failSave=false;});
       await page.locator('#auto-retry').click();
       await page.locator('#auto-dialog').waitFor({state:'hidden'});
       const state=await page.evaluate(()=>__state());
@@ -71,7 +71,7 @@ const {chromium}=require(path.join(process.env.TUBESHELF_NODE_MODULES,'playwrigh
       release();
       await page.waitForFunction(()=>!document.getElementById('auto-organize').disabled);
       assert.equal(await page.evaluate(()=>__operations.filter(type=>type==='auto-classify').length),before);
-      assert.deepEqual(await page.evaluate(()=>TubeShelfCore.unfiledChannelIds(__state())),['/@cancel']);
+      assert.deepEqual(await page.evaluate(()=>ChanlumeCore.unfiledChannelIds(__state())),['/@cancel']);
       assert.deepEqual(errors,[]);
       await page.close();
     }

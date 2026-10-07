@@ -1,19 +1,19 @@
 (function () {
   "use strict";
-  const Core = globalThis.TubeShelfCore;
-  const STORAGE_KEY = "tubeShelfState";
+  const Core = globalThis.ChanlumeCore;
+  const STORAGE_KEY = "chanlumeState";
   let state = Core.defaultState();
   let activeTab = null;
 
   const extensionApi = globalThis.chrome?.storage?.local
     ? {
-        getState: async () => (await chrome.storage.local.get(STORAGE_KEY))[STORAGE_KEY],
+        getState: async () => (await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY],
         activeTab: async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0],
         send: (tabId, message) => chrome.tabs.sendMessage(tabId, message),
         navigate: (tab, url) => tab?.id && /^https:\/\/(www\.)?youtube\.com\//.test(tab.url || "") ? chrome.tabs.update(tab.id, { url }) : chrome.tabs.create({ url }),
         openOptions: () => chrome.runtime.openOptionsPage(),
         onChange: (callback) => chrome.storage.onChanged.addListener(callback),
-        mutate: (operation) => chrome.runtime.sendMessage({ type: "TUBESHELF_MUTATE", operation })
+        mutate: (operation) => chrome.runtime.sendMessage({ type: "CHANLUME_MUTATE", operation })
       }
     : {
         getState: async () => ({
@@ -53,10 +53,10 @@
 
   function render() {
     const enabled = state.settings.enabled;
-    document.body.classList.toggle("ts-paused", !enabled);
+    document.body.classList.toggle("cl-paused", !enabled);
     const power = document.getElementById("power-toggle");
     power.setAttribute("aria-pressed", String(enabled));
-    const label = Core.translateUiText(enabled ? "關閉 TubeShelf，恢復原本 YouTube" : "啟用 TubeShelf", state.settings.language);
+    const label = Core.translateUiText(enabled ? "關閉 Chanlume，恢復原本 YouTube" : "啟用 Chanlume", state.settings.language);
     power.setAttribute("aria-label", label);
     power.title = label;
     ["open-panel", "update-subscriptions"].forEach((id) => { document.getElementById(id).disabled = !enabled; });
@@ -83,7 +83,7 @@
     document.querySelectorAll("[data-destination]").forEach((button) => button.classList.toggle("active", button.dataset.destination === kind));
     if (!state.settings.enabled) {
       card.classList.remove("ready");
-      document.getElementById("page-title").textContent = "TubeShelf 已關閉";
+      document.getElementById("page-title").textContent = "Chanlume 已關閉";
       document.getElementById("page-hint").textContent = "正在使用原本 YouTube，群組與設定已保留";
     }
     localize(document.getElementById("page-card"));
@@ -112,7 +112,7 @@
   document.getElementById("open-home").addEventListener("click", async () => { await extensionApi.navigate(activeTab, "https://www.youtube.com/"); window.close(); });
   document.getElementById("open-subscriptions").addEventListener("click", async () => { await extensionApi.navigate(activeTab, Core.subscriptionGroupUrl("all")); window.close(); });
   document.getElementById("open-panel").addEventListener("click", async () => {
-    const result = await send({ type: "OPEN_TUBESHELF" });
+    const result = await send({ type: "OPEN_CHANLUME" });
     if (!result) await extensionApi.navigate(activeTab, Core.subscriptionGroupUrl("all"));
     window.close();
   });
@@ -132,7 +132,7 @@
   document.getElementById("groups").addEventListener("click", async (event) => {
     const id = event.target.closest("[data-group]")?.dataset.group;
     if (!id) return;
-    const result = await send({ type: "OPEN_TUBESHELF", groupId: id });
+    const result = await send({ type: "OPEN_CHANLUME", groupId: id });
     if (!result) await extensionApi.navigate(activeTab, Core.subscriptionGroupUrl(id));
     window.close();
   });

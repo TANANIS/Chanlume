@@ -1,8 +1,8 @@
 (function () {
   "use strict";
-  const Core = globalThis.TubeShelfCore;
-  const STORAGE_KEY = "tubeShelfState";
-  const API_KEY_STORAGE = "tubeShelfYouTubeApiKey";
+  const Core = globalThis.ChanlumeCore;
+  const STORAGE_KEY = "chanlumeState";
+  const API_KEY_STORAGE = "chanlumeYouTubeApiKey";
   const PROFILE_VERSION = 5;
   const COLORS = ["#7c5cff", "#ff6b8a", "#2dbd9b", "#f0a44b", "#4a91ff", "#bc6fe8"];
   let state = Core.defaultState();
@@ -25,10 +25,10 @@
 
   const api = location.protocol === "chrome-extension:" && globalThis.chrome?.storage?.local
     ? {
-        load: async () => (await chrome.storage.local.get(STORAGE_KEY))[STORAGE_KEY],
-        mutate: (operation) => chrome.runtime.sendMessage({ type: "TUBESHELF_MUTATE", operation }),
-        loadSecret: async () => String((await chrome.storage.local.get(API_KEY_STORAGE))[API_KEY_STORAGE] || ""),
-        saveSecret: (value) => chrome.runtime.sendMessage({ type: "TUBESHELF_SET_API_KEY", value: String(value || "") }),
+        load: async () => (await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY],
+        mutate: (operation) => chrome.runtime.sendMessage({ type: "CHANLUME_MUTATE", operation }),
+        loadSecret: async () => String((await Core.readStoredValues(chrome.storage.local, API_KEY_STORAGE))[API_KEY_STORAGE] || ""),
+        saveSecret: (value) => chrome.runtime.sendMessage({ type: "CHANLUME_SET_API_KEY", value: String(value || "") }),
         open: (url) => chrome.tabs.create({ url }),
         onChange: (callback) => chrome.storage.onChanged.addListener(callback)
       }
@@ -65,7 +65,7 @@
   const t = (value) => Core.translateUiText(value, currentLanguage());
   function localize(root = document) {
     document.documentElement.lang = currentLanguage() === "en" ? "en" : "zh-Hant";
-    document.title = Core.translateUiText("TubeShelf 管理中心", currentLanguage());
+    document.title = Core.translateUiText("Chanlume 管理中心", currentLanguage());
     Core.localizeDom(root, currentLanguage());
   }
 
@@ -209,7 +209,7 @@
     }
     if (!channels.length) {
       const emptyGroup = selected || isUnfiled;
-      $("channel-list").innerHTML = `<div class="empty-state"><div class="empty-icon">${Core.iconSvg(query ? "star" : "book", "currentColor", 25)}</div><strong>${query ? "找不到符合的頻道" : emptyGroup ? "這裡目前沒有頻道" : "書架還是空的"}</strong><p>${query ? "換個關鍵字再試一次。" : emptyGroup ? "可從頻道詳細資料調整群組，或執行本機自動整理。" : "按「更新訂閱內容」，TubeShelf 就會自動載入全部 YouTube 訂閱頻道。"}</p></div>`;
+      $("channel-list").innerHTML = `<div class="empty-state"><div class="empty-icon">${Core.iconSvg(query ? "star" : "book", "currentColor", 25)}</div><strong>${query ? "找不到符合的頻道" : emptyGroup ? "這裡目前沒有頻道" : "書架還是空的"}</strong><p>${query ? "換個關鍵字再試一次。" : emptyGroup ? "可從頻道詳細資料調整群組，或執行本機自動整理。" : "按「更新訂閱內容」，Chanlume 就會自動載入全部 YouTube 訂閱頻道。"}</p></div>`;
       localize($("channel-list").closest(".channel-pane"));
       scheduleWorkspaceLayout();
       return;
@@ -609,12 +609,12 @@
   }
 
   const ONBOARDING_STEPS = [
-    { icon: "✦", title: "歡迎使用 TubeShelf", copy: "這份教學會陪你完成第一次更新、第一次本機自動整理，以及日後手動管理群組的方法。所有資料只留在這台裝置。", action: "開始教學" },
-    { icon: "↻", title: "先建立你的訂閱書架", copy: "按下「更新訂閱內容」後，TubeShelf 會開啟 YouTube 的所有訂閱頁並自動載入完整清單。完成後這個頁面會立即顯示頻道。", target: "#update-subscriptions", action: "更新訂閱內容" },
+    { icon: "✦", title: "歡迎使用 Chanlume", copy: "這份教學會陪你完成第一次更新、第一次本機自動整理，以及日後手動管理群組的方法。所有資料只留在這台裝置。", action: "開始教學" },
+    { icon: "↻", title: "先建立你的訂閱書架", copy: "按下「更新訂閱內容」後，Chanlume 會開啟 YouTube 的所有訂閱頁並自動載入完整清單。完成後這個頁面會立即顯示頻道。", target: "#update-subscriptions", action: "更新訂閱內容" },
     { icon: "✦", title: "第一次自動整理", copy: "自動分類會直接整理所有待分類頻道；資訊不足的放入「其他」，之後都能編輯。", target: "#auto-organize", action: "開啟自動整理" },
     { icon: "▦", title: "檢查並手動調整", copy: "選擇左側群組即可查看真正成員。點頻道卡片可看詳細資料；使用「管理成員」可批次加入或移出，也能用「新增群組」建立自己的分類。", target: ".group-pane", action: "下一步" },
     { icon: "⌁", title: "依喜好整理 YouTube", copy: "偏好設定可以封鎖首頁、關閉 Shorts、隱藏影片右欄、關閉自動播放與隱藏已觀看影片；下方也能匯出或匯入備份。", target: ".settings-grid", action: "下一步" },
-    { icon: "✓", title: "準備完成", copy: "回到 YouTube 訂閱內容後，可從左側 TubeShelf 群組或頁面上方快速切換。齒輪會直接開啟完整面板。", action: "完成" }
+    { icon: "✓", title: "準備完成", copy: "回到 YouTube 訂閱內容後，可從左側 Chanlume 群組或頁面上方快速切換。齒輪會直接開啟完整面板。", action: "完成" }
   ];
 
   function clearOnboardingTarget() {
@@ -906,7 +906,7 @@
   });
   $("export").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `tubeshelf-backup-${new Date().toISOString().slice(0, 10)}.json` });
+    const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `chanlume-backup-${new Date().toISOString().slice(0, 10)}.json` });
     link.click();
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     toast("備份已匯出");
@@ -916,11 +916,11 @@
     const file = event.target.files?.[0];
     if (!file) return;
     try { await commit({ type: "replace-state", payload: { state: JSON.parse(await file.text()) } }, "備份已匯入"); }
-    catch (_error) { toast("這不是有效的 TubeShelf 備份"); }
+    catch (_error) { toast("這不是有效的 Chanlume 備份"); }
     event.target.value = "";
   });
   $("reset").addEventListener("click", async () => {
-    if (!confirm(t("要清除 TubeShelf 的本機群組與已收集頻道嗎？這不會取消 YouTube 訂閱。"))) return;
+    if (!confirm(t("要清除 Chanlume 的本機群組與已收集頻道嗎？這不會取消 YouTube 訂閱。"))) return;
     selectedGroupId = "all";
     managingMembers = false;
     await commit({ type: "reset-state" }, "本機資料已清除");
@@ -952,7 +952,7 @@
         renderOnboarding();
       }
     }
-    const scan = changes.tubeShelfScanStatus?.newValue;
+    const scan = changes.chanlumeScanStatus?.newValue;
     if (!scan) return;
     if (["complete", "failed"].includes(scan.state)) {
       $("update-subscriptions").disabled = false;

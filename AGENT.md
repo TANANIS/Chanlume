@@ -1,10 +1,10 @@
-# TubeShelf Agent Guide
+# Chanlume Agent Guide
 
-This file defines the working rules for agents and maintainers changing TubeShelf. Read `README.md`, `STATE_SYNC.md`, and `HANDOFF.md` before making non-trivial changes.
+This file defines the working rules for agents and maintainers changing Chanlume. Read `README.md`, `STATE_SYNC.md`, and `HANDOFF.md` before making non-trivial changes.
 
 ## Product boundaries
 
-- TubeShelf is a local-first Chrome/Edge Manifest V3 extension for organizing YouTube subscriptions.
+- Chanlume is a local-first Chrome/Edge Manifest V3 extension for organizing YouTube subscriptions.
 - Keep the YouTube recommendation home page separate from the subscription shelf. Group filtering belongs to `/feed/subscriptions`; do not reinterpret or reorganize the recommendation algorithm.
 - Do not add telemetry, a remote backend, cloud AI, or upload browsing/subscription data unless the user explicitly changes that product decision.
 - Preserve existing user data and imported backups. Schema migrations must be backward compatible and idempotent.
@@ -13,20 +13,20 @@ This file defines the working rules for agents and maintainers changing TubeShel
 ## Repository map
 
 - `extension/shared.js`: state schema, normalization, channel identity, grouping, classification, and semantic state operations.
-- `extension/background.js`: the only writer of `tubeShelfState`; serializes mutations and broadcasts committed revisions.
+- `extension/background.js`: the only writer of `chanlumeState`; serializes mutations and broadcasts committed revisions.
 - `extension/content/content.js`: YouTube integration, scanning, filtering, page controls, and DOM behavior.
 - `extension/content/identity-bridge.js`: MAIN-world, read-only bridge for stable YouTube channel identity evidence.
 - `extension/dashboard/`: full collection and settings UI.
 - `extension/popup/`: compact extension UI.
 - `tests/`: unit, manifest, background, harness, and browser smoke coverage.
 - `outputs/extension/`: installable unpacked mirror.
-- `outputs/TubeShelf-<version>.zip`: store/release package.
+- `outputs/Chanlume-<version>.zip`: store/release package.
 
 ## State and synchronization standard
 
 Follow `STATE_SYNC.md` as the normative specification.
 
-1. `background.js` is the sole writer of `chrome.storage.local.tubeShelfState`.
+1. `background.js` is the sole writer of `chrome.storage.local.chanlumeState`.
 2. Frontends send semantic operations; they must not read, modify, and save an entire stale state snapshot.
 3. The background mutation queue reads the latest committed state, applies one operation, increments `revision`, writes once, and then broadcasts the commit.
 4. Every frontend deduplicates rendering by `revision`. A full reload must produce the same visible result as a live commit notification.
@@ -68,7 +68,7 @@ node --check extension/popup/popup.js
 node --test tests/shared.test.js tests/manifest.test.js tests/background.test.js
 ```
 
-For UI or YouTube integration changes, also run `tests/ui-smoke.cjs` against a local HTTP server. The smoke test needs Playwright available through `TUBESHELF_NODE_MODULES` in this workspace environment.
+For UI or YouTube integration changes, also run `tests/ui-smoke.cjs` against a local HTTP server. The smoke test needs Playwright available through `CHANLUME_NODE_MODULES` in this workspace environment.
 
 Automated harnesses do not replace an installed-extension check. Report these separately:
 
@@ -76,7 +76,7 @@ Automated harnesses do not replace an installed-extension check. Report these se
 - browser harness smoke tests;
 - manual verification on the signed-in YouTube account.
 
-For identity changes, manually verify at minimum that a channel categorized from its channel/watch page leaves `#tubeshelf-group=unfiled` after returning to subscriptions, both live and after reload.
+For identity changes, manually verify at minimum that a channel categorized from its channel/watch page leaves `#chanlume-group=unfiled` after returning to subscriptions, both live and after reload.
 
 ## Packaging and release
 

@@ -1,4 +1,4 @@
-# TubeShelf 1.18.5 效能改善
+# Chanlume 1.18.5 效能改善
 
 日期：2026-09-08。以下保留 1.18.5 當時的基準量測；效能改善已包含在 1.18.7，最新套件見 README。尚未在使用者登入的 YouTube 帳號完成安裝後實測，商店版本亦尚未更新。
 
@@ -32,13 +32,13 @@
 - `node --test tests/shared.test.js tests/manifest.test.js tests/background.test.js`：44/44 通過。
 - 本機 HTTP server 的 8766 port 下執行 `tests/ui-smoke.cjs`：通過。
 - 同一 server 下執行 `tests/performance-smoke.cjs`：通過。涵蓋持續 DOM 變動不阻塞篩選、無自我重刷、卡片 href 重用、背景狀態追上、revision 去重、觀看進度變更、非訂閱頁無用卡片工作排除、身分橋接導航與背景恢復。
-- 設定 `TUBESHELF_NODE_MODULES` 指向含 Playwright 的 node_modules 後，`node work/performance-audit.cjs` 自行啟動限 localhost 的測試 server，產生 `work/performance-audit-results.json`。該 JSON 包含實測原始碼 SHA-256。
+- 設定 `CHANLUME_NODE_MODULES` 指向含 Playwright 的 node_modules 後，`node work/performance-audit.cjs` 自行啟動限 localhost 的測試 server，產生 `work/performance-audit-results.json`。該 JSON 包含實測原始碼 SHA-256。
 - `scripts/package.py` 建立 ZIP，檢查 manifest 在根目錄，驗證來源、解壓縮鏡像、ZIP 全部 18 個檔案內容一致。
 
 記憶體判讀方法參考 [Chrome DevTools：Fix memory problems](https://developer.chrome.com/docs/devtools/memory-problems)，區別配置造成的 GC 負擔、持有不用的資料，以及需要長時間快照才能確認的持續洩漏。
 
 ## 本機套用
 
-目前發布套件為 `outputs/TubeShelf-1.18.7.zip`，解壓縮鏡像為 `outputs/extension/`。若目前已從該資料夾載入未封裝擴充套件，在擴充功能管理頁重新載入，再重新整理既有 YouTube 分頁一次。這次重新整理用於替換舊版內容腳本；日常群組篩選與分類變更仍在頁面內動態套用。
+此歷史效能紀錄對應的套件為 `outputs/TubeShelf-1.18.7.zip`；目前套件為 `outputs/Chanlume-1.19.3.zip`，解壓縮鏡像為 `outputs/extension/`。若目前已從該資料夾載入未封裝擴充套件，在擴充功能管理頁重新載入，再重新整理既有 YouTube 分頁一次。這次重新整理用於替換舊版內容腳本；日常群組篩選與分類變更仍在頁面內動態套用。
 
 1.18.7 SHA-256：`b012f4612c4dfbb29efb0acb1f21920c5ee77ae3c82fabd69df2bfc1d3e9a08e`。

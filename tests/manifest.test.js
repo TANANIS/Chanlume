@@ -8,7 +8,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, "manifest.j
 
 test("manifest is MV3 and requests only the intended permissions", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "1.19.2");
+  assert.equal(manifest.version, "1.19.3");
   assert.deepEqual(manifest.permissions.sort(), ["storage"]);
   assert.deepEqual(manifest.host_permissions.sort(), ["https://www.googleapis.com/youtube/v3/*", "https://www.youtube.com/*"]);
 });
@@ -58,7 +58,7 @@ test("Shorts navigation and one-time onboarding fixes are included", () => {
   const dashboardJs = fs.readFileSync(path.join(extensionRoot, "dashboard/dashboard.js"), "utf8");
   assert.match(contentCss, /ytd-guide-entry-renderer:has\(\[title="Shorts"\]\)/);
   assert.match(contentCss, /ytd-guide-entry-renderer:has\(\[aria-label="Shorts"\]\)/);
-  assert.match(contentCss, /html\.tubeshelf-hide-shorts ytd-rich-shelf-renderer:has\(a\[href\^="\/shorts\/"\]/);
+  assert.match(contentCss, /html\.chanlume-hide-shorts ytd-rich-shelf-renderer:has\(a\[href\^="\/shorts\/"\]/);
   assert.match(contentJs, /await commit\(\{ type: "reconcile-subscription-scan"/);
   assert.match(contentJs, /yt-page-header-view-model yt-subscribe-button-view-model/);
   assert.match(dashboardHtml, /id="onboarding"/);
@@ -68,17 +68,17 @@ test("Shorts navigation and one-time onboarding fixes are included", () => {
   assert.match(dashboardHtml, /id="merge-group-section"/);
   assert.match(dashboardJs, /type: "merge-groups"/);
   assert.match(dashboardJs, /chrome\.storage\.onChanged\.addListener/);
-  assert.match(dashboardJs, /tubeShelfScanStatus/);
+  assert.match(dashboardJs, /chanlumeScanStatus/);
   const identityBridge = manifest.content_scripts.find((entry) => entry.world === "MAIN");
   assert.ok(identityBridge?.js.includes("content/identity-bridge.js"));
 });
 
-test("the background service worker is the only tubeShelfState writer", () => {
+test("the background service worker is the only chanlumeState writer", () => {
   const backgroundJs = fs.readFileSync(path.join(extensionRoot, "background.js"), "utf8");
   const contentJs = fs.readFileSync(path.join(extensionRoot, "content/content.js"), "utf8");
   const dashboardJs = fs.readFileSync(path.join(extensionRoot, "dashboard/dashboard.js"), "utf8");
   assert.match(backgroundJs, /stateWriteQueue/);
-  assert.match(backgroundJs, /TUBESHELF_MUTATE/);
+  assert.match(backgroundJs, /CHANLUME_MUTATE/);
   assert.match(backgroundJs, /Core\.applyStateOperation/);
   assert.doesNotMatch(contentJs, /chrome\.storage\.local\.set/);
   assert.doesNotMatch(dashboardJs, /chrome\.storage\.local\.set/);

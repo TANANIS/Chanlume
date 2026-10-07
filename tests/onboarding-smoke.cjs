@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { chromium } = require(path.join(process.env.TUBESHELF_NODE_MODULES, 'playwright'));
+const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playwright'));
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
@@ -20,26 +20,26 @@ const { chromium } = require(path.join(process.env.TUBESHELF_NODE_MODULES, 'play
         let listener;
         const getState = () => JSON.parse(localStorage.getItem('onboarding-fixture') || 'null');
         globalThis.chrome = {
-          storage: { local: { get: async key => ({ [key]: key === 'tubeShelfState' ? getState() : '' }) }, onChanged: { addListener: fn => { listener = fn; } } },
+          storage: { local: { get: async keys => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(key => [key, key === 'chanlumeState' ? getState() : undefined])) }, onChanged: { addListener: fn => { listener = fn; } } },
           tabs: { create: async () => ({ id: 1 }) },
           runtime: { sendMessage: async message => {
-            if (message.type !== 'TUBESHELF_MUTATE') return { ok: true };
+            if (message.type !== 'CHANLUME_MUTATE') return { ok: true };
             const old = getState();
-            const state = TubeShelfCore.applyStateOperation(old, message.operation);
+            const state = ChanlumeCore.applyStateOperation(old, message.operation);
             state.revision = (old?.revision || 0) + 1;
             localStorage.setItem('onboarding-fixture', JSON.stringify(state));
-            listener?.({ tubeShelfState: { newValue: state } }, 'local');
+            listener?.({ chanlumeState: { newValue: state } }, 'local');
             return { ok: true, state };
           } }
         };
       });
-      const url = 'http://127.0.0.1:8766/extension/dashboard/dashboard.html?view=settings';
+      const url = 'http://127.0.0.1:18766/extension/dashboard/dashboard.html?view=settings';
       await page.goto(url);
       await page.locator('.onboarding-card').waitFor({ state: 'visible' });
       assert.equal(await page.locator('#settings-view').isVisible(), true);
       assert.equal(await page.locator('#library-view').isVisible(), false);
       assert.equal(await page.locator('.page-header h1').innerText(), locale === 'zh-TW' ? '偏好設定' : 'Preferences');
-      assert.equal(await page.locator('#onboarding-title').innerText(), locale === 'zh-TW' ? '歡迎使用 TubeShelf' : 'Welcome to TubeShelf');
+      assert.equal(await page.locator('#onboarding-title').innerText(), locale === 'zh-TW' ? '歡迎使用 Chanlume' : 'Welcome to Chanlume');
       await page.screenshot({ path: `work/first-install-${locale}.png`, fullPage: true });
       await page.locator('#onboarding [data-open-templates]').click();
       await page.locator('#template-options input[value="science"]').check();

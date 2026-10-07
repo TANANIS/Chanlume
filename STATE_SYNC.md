@@ -1,12 +1,18 @@
-# TubeShelf state synchronization standard
+# Chanlume state synchronization standard
 
 ## Source of truth
 
-`chrome.storage.local.tubeShelfState` is the durable source of truth. The background service worker is its only writer. Dashboard, popup, and YouTube content scripts may read state, but must never call `chrome.storage.local.set()` for `tubeShelfState`.
+`chrome.storage.local.chanlumeState` is the durable source of truth. The background service worker is its only writer. Dashboard, popup, and YouTube content scripts may read state, but must never call `chrome.storage.local.set()` for `chanlumeState`.
+
+## Rename compatibility (1.19.3)
+
+The background's serialized task queue copies missing `chanlumeState`, `chanlumeYouTubeApiKey` and `chanlumeScanStatus` values from the legacy `tubeShelfState`, `tubeShelfYouTubeApiKey` and `tubeShelfScanStatus` keys before performing a state task. Existing new keys always win, including empty credentials or a reset library. Legacy copies are retained for recovery and are never written again. Frontends use read-only fallback while migration is pending. Update normalization advances revision without opening onboarding or resetting data.
+
+New messages use `CHANLUME_*`; the background accepts old `TUBESHELF_*` requests during updates. Old `#tubeshelf-group`, `#tubeshelf-view` and scan links map to Chanlume links. JSON backup content/schema remains unchanged; only new export filenames change.
 
 ## Mutation protocol
 
-Frontends send a `TUBESHELF_MUTATE` runtime message containing one semantic operation. Supported operations are implemented by `TubeShelfCore.applyStateOperation()`:
+Frontends send a `CHANLUME_MUTATE` runtime message containing one semantic operation. Supported operations are implemented by `ChanlumeCore.applyStateOperation()`:
 
 - `toggle-membership`
 - `bulk-membership`
@@ -49,9 +55,9 @@ Do not add a frontend code path that accepts a state snapshot and writes it back
 
 Dashboard member editing keeps temporary changes in memory; Cancel performs no mutation and Save sends one `edit-memberships` operation (with `groupId`). Favorites now apply immediately: the searchable group-filtered picker and channel/watch-page star each send `edit-favorites`. Both operations contain `changes: [{ channelId, enabled }]`. The queue applies only touched IDs against current state, preserving concurrent edits to other channels and never recreating a deleted channel. Failed favorite mutations retain the committed selection for retry; closing the picker does not undo successful changes.
 
-Favorites use `/feed/subscriptions#tubeshelf-view=favorites` and mount in that page's `#primary`. Native children are hidden only while this view is active; navigation and disabling TubeShelf restore them. The guide entry stays visible above the collapsible group heading.
+Favorites use `/feed/subscriptions#chanlume-view=favorites` and mount in that page's `#primary`. Native children are hidden only while this view is active; navigation and disabling Chanlume restore them. The guide entry stays visible above the collapsible group heading.
 
-`TUBESHELF_FAVORITE_FEED` is a read-only background request restricted to existing favorites while enabled. Public YouTube channel metadata resolves the page owner when a stable ID is unavailable, then the YouTube Atom feed supplies video IDs, titles and publication dates. There is no API key requirement. Requests use a 20-second timeout, a three-request concurrency limit, per-channel request deduplication and an in-memory five-minute cache capped at 100 entries. Opening the view loads the list; refresh bypasses the cache. Individual failures keep previously loaded videos visible and expose retry. No polling or viewing history is added.
+`CHANLUME_FAVORITE_FEED` is a read-only background request restricted to existing favorites while enabled. Public YouTube channel metadata resolves the page owner when a stable ID is unavailable, then the YouTube Atom feed supplies video IDs, titles and publication dates. There is no API key requirement. Requests use a 20-second timeout, a three-request concurrency limit, per-channel request deduplication and an in-memory five-minute cache capped at 100 entries. Opening the view loads the list; refresh bypasses the cache. Individual failures keep previously loaded videos visible and expose retry. No polling or viewing history is added.
 
 When `settings.hideShorts` is true, Favorites instead reads the selected channel Videos tab from public `ytInitialData`. Only recognized normal video cards are accepted; Shorts links/reel endpoints, shelves and playlists are excluded. Missing or unrecognized data produces a retryable error, never an RSS fallback. Cache and in-flight keys include the Shorts mode. A live mode change clears rendered video data and advances the request generation, so stale RSS replies cannot restore Shorts. Same-mode retry failures may retain previously verified normal videos.
 
@@ -69,17 +75,17 @@ The progress dialog closes after a successful commit. Failed metadata reads use 
 
 YouTube may represent one channel as a readable `/@handle` URL on subscription cards and a `/channel/UC...` canonical URL elsewhere. Channel records keep an immutable local key, while `channelAliases` maps every strongly verified YouTube identity to that record. New records normally begin with the scanned handle as their local key; learning a stable channel ID adds an alias and never requires changing an already unambiguous key.
 
-The scan-page Main-world bridge reads `browseId` and `canonicalBaseUrl` from the same YouTube renderer and sends only validated identity pairs to the isolated TubeShelf content script. Channel and watch pages submit their canonical path as another strong alias source. `coalesce-channel-identities` merges duplicate channel records, group memberships, manual learning labels, and the newest cached metadata. Membership and subscription operations carry the same alias context so a user action cannot recreate the split identity. Display names are never identity evidence.
+The scan-page Main-world bridge reads `browseId` and `canonicalBaseUrl` from the same YouTube renderer and sends only validated identity pairs to the isolated Chanlume content script. Channel and watch pages submit their canonical path as another strong alias source. `coalesce-channel-identities` merges duplicate channel records, group memberships, manual learning labels, and the newest cached metadata. Membership and subscription operations carry the same alias context so a user action cannot recreate the split identity. Display names are never identity evidence.
 
 ## Frontend refresh standard
 
 Each frontend keeps a read-only in-memory cache. A committed state may arrive through the mutation response or `chrome.storage.onChanged`; the frontend accepts it only when its `revision` is newer than the cached revision. The first accepted copy renders the UI and a duplicate copy is ignored.
 
-YouTube SPA navigation is separate from state synchronization. Page navigation reapplies controls and card filters from the current cache. Subscription group selection is mirrored to `#tubeshelf-group=...` and reparsed after navigation or hash changes.
+YouTube SPA navigation is separate from state synchronization. Page navigation reapplies controls and card filters from the current cache. Subscription group selection is mirrored to `#chanlume-group=...` and reparsed after navigation or hash changes.
 
 ## Long-running metadata work
 
-`settings.enabled` is the persistent global YouTube integration power state (missing values default to `true`). The popup changes it using `set-setting` through the background queue. Turning off retains channels, aliases, groups and individual settings, tears down filtering/UI/observers in every content tab, and stops identity inspection. Disabled tabs still accept storage revisions so enabling restores current state without a reload. Automatic subscription and identity operations are rejected while disabled; an interrupted full scan must not reconcile a partial list. Already-completed navigation is not reversed; a TubeShelf-disabled autoplay toggle is restored only when its original element remains connected and the user has not manually changed it.
+`settings.enabled` is the persistent global YouTube integration power state (missing values default to `true`). The popup changes it using `set-setting` through the background queue. Turning off retains channels, aliases, groups and individual settings, tears down filtering/UI/observers in every content tab, and stops identity inspection. Disabled tabs still accept storage revisions so enabling restores current state without a reload. Automatic subscription and identity operations are rejected while disabled; an interrupted full scan must not reconcile a partial list. Already-completed navigation is not reversed; a Chanlume-disabled autoplay toggle is restored only when its original element remains connected and the user has not manually changed it.
 
 Network work must run against cloned channel objects. On completion it sends `patch-channels`; it must not save the snapshot used to start the work. Local profile data and official metadata are merged only when their timestamps are at least as new as the stored values.
 

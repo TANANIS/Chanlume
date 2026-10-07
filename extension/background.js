@@ -1,14 +1,14 @@
 importScripts("shared.js");
 
-const Core = globalThis.TubeShelfCore;
-const STORAGE_KEY = "tubeShelfState";
-const API_KEY_STORAGE = "tubeShelfYouTubeApiKey";
+const Core = globalThis.ChanlumeCore;
+const STORAGE_KEY = "chanlumeState";
+const API_KEY_STORAGE = "chanlumeYouTubeApiKey";
 let stateWriteQueue = Promise.resolve();
 const favoriteFeedCache = new Map();
 const favoriteFeedPending = new Map();
 
 async function readFavoriteFeed(identity, force = false) {
-  const current = Core.normalizeState((await chrome.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
+  const current = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
   const id = Core.resolveChannelRecordId(current, identity);
   if (!current.settings.enabled || !id || !current.favoriteChannelIds.includes(id)) throw new Error("Channel is not an active favorite");
   const channel = current.channels[id];
@@ -57,14 +57,28 @@ async function readFavoriteFeed(identity, force = false) {
 }
 
 function enqueueStateTask(task) {
-  const transaction = stateWriteQueue.then(task);
+  const transaction = stateWriteQueue.then(async () => {
+    await migrateLegacyStorage();
+    return task();
+  });
   stateWriteQueue = transaction.catch(() => {});
   return transaction;
 }
 
+async function migrateLegacyStorage() {
+  const keys = Object.keys(Core.LEGACY_STORAGE_KEYS);
+  const values = await chrome.storage.local.get([...keys, ...Object.values(Core.LEGACY_STORAGE_KEYS)]);
+  const migrated = {};
+  for (const key of keys) {
+    const legacy = values[Core.LEGACY_STORAGE_KEYS[key]];
+    if (values[key] === undefined && legacy !== undefined) migrated[key] = legacy;
+  }
+  if (Object.keys(migrated).length) await chrome.storage.local.set(migrated);
+}
+
 function enqueueStateOperation(operation) {
   return enqueueStateTask(async () => {
-    const saved = await chrome.storage.local.get(STORAGE_KEY);
+    const saved = await Core.readStoredValues(chrome.storage.local, STORAGE_KEY);
     const current = Core.normalizeState(saved[STORAGE_KEY]);
     const next = Core.applyStateOperation(current, operation);
     next.revision = current.revision + 1;
@@ -75,7 +89,7 @@ function enqueueStateOperation(operation) {
 }
 
 chrome.runtime.onInstalled.addListener((details) => enqueueStateTask(async () => {
-  const saved = await chrome.storage.local.get(STORAGE_KEY);
+  const saved = await Core.readStoredValues(chrome.storage.local, STORAGE_KEY);
   const current = Core.normalizeState(saved[STORAGE_KEY]);
   const normalized = Core.normalizeState({ ...current, revision: current.revision + 1 });
   await chrome.storage.local.set({ [STORAGE_KEY]: normalized });
@@ -83,10 +97,14 @@ chrome.runtime.onInstalled.addListener((details) => enqueueStateTask(async () =>
   if (details.reason === "install") {
     await chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html?view=settings"), active: true });
   }
-}).catch((error) => console.error("TubeShelf installation setup failed", error)));
+}).catch((error) => console.error("Chanlume installation setup failed", error)));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === "TUBESHELF_FAVORITE_FEED") {
+  // Already-open older frontends may finish a request during an extension update.
+  if (typeof message?.type === "string" && message.type.startsWith("TUBESHELF_")) {
+    message = { ...message, type: message.type.replace(/^TUBESHELF_/, "CHANLUME_") };
+  }
+  if (message?.type === "CHANLUME_FAVORITE_FEED") {
     readFavoriteFeed(message.channelId, message.force === true)
       .then((result) => sendResponse({ ok: true, ...result }))
       .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
@@ -96,27 +114,27 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
   }
-  if (message?.type === "TUBESHELF_MUTATE") {
+  if (message?.type === "CHANLUME_MUTATE") {
     enqueueStateOperation(message.operation)
       .then((state) => sendResponse({ ok: true, state }))
       .catch((error) => sendResponse({ ok: false, code: error?.code || "STATE_MUTATION_FAILED", error: String(error?.message || error) }));
     return true;
   }
-  if (message?.type === "TUBESHELF_SET_API_KEY") {
-    chrome.storage.local.set({ [API_KEY_STORAGE]: String(message.value || "") })
+  if (message?.type === "CHANLUME_SET_API_KEY") {
+    enqueueStateTask(() => chrome.storage.local.set({ [API_KEY_STORAGE]: String(message.value || "") }))
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
   if (message?.type === "START_SUBSCRIPTION_UPDATE") {
     (async () => {
-      const state = await chrome.storage.local.get(STORAGE_KEY);
+      const state = await Core.readStoredValues(chrome.storage.local, STORAGE_KEY);
       if (state[STORAGE_KEY]?.settings?.enabled === false) {
-        sendResponse({ ok: false, error: "TUBESHELF_DISABLED" });
+        sendResponse({ ok: false, error: "CHANLUME_DISABLED" });
         return;
       }
-      const saved = await chrome.storage.local.get("tubeShelfScanStatus");
-      const current = saved.tubeShelfScanStatus;
+      const saved = await Core.readStoredValues(chrome.storage.local, "chanlumeScanStatus");
+      const current = saved.chanlumeScanStatus;
       if (["starting", "running"].includes(current?.state) && current.tabId && Date.now() - current.startedAt < 300000) {
         try {
           await chrome.tabs.update(current.tabId, { active: true });
@@ -124,14 +142,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return;
         } catch (_error) {}
       }
-      const tab = await chrome.tabs.create({ url: "https://www.youtube.com/feed/channels#tubeshelf-update-subscriptions", active: true });
-      await chrome.storage.local.set({ tubeShelfScanStatus: { state: "starting", count: 0, startedAt: Date.now(), tabId: tab.id } });
+      const tab = await chrome.tabs.create({ url: "https://www.youtube.com/feed/channels#chanlume-update-subscriptions", active: true });
+      await chrome.storage.local.set({ chanlumeScanStatus: { state: "starting", count: 0, startedAt: Date.now(), tabId: tab.id } });
       sendResponse({ ok: true, tabId: tab.id });
     })().catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
   if (message?.type === "SUBSCRIPTION_UPDATE_PROGRESS") {
-    chrome.storage.local.set({ tubeShelfScanStatus: { state: "running", count: Number(message.count) || 0, startedAt: Number(message.startedAt) || Date.now(), tabId: _sender.tab?.id } })
+    chrome.storage.local.set({ chanlumeScanStatus: { state: "running", count: Number(message.count) || 0, startedAt: Number(message.startedAt) || Date.now(), tabId: _sender.tab?.id } })
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;
@@ -139,17 +157,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "SUBSCRIPTION_UPDATE_COMPLETE") {
     const count = Number(message.count) || 0;
     (async () => {
-      await chrome.storage.local.set({ tubeShelfScanStatus: { state: "complete", count, completedAt: Date.now() } });
+      await chrome.storage.local.set({ chanlumeScanStatus: { state: "complete", count, completedAt: Date.now() } });
       await chrome.action.setBadgeBackgroundColor({ color: "#2dbd9b" });
       await chrome.action.setBadgeText({ text: "✓" });
       setTimeout(() => chrome.action.setBadgeText({ text: "" }), 5000);
-      if (_sender.tab?.id && _sender.tab.url?.includes("#tubeshelf-update-subscriptions")) setTimeout(() => chrome.tabs.remove(_sender.tab.id).catch(() => {}), 900);
+      if (_sender.tab?.id && _sender.tab.url?.includes("#chanlume-update-subscriptions")) setTimeout(() => chrome.tabs.remove(_sender.tab.id).catch(() => {}), 900);
       sendResponse({ ok: true });
     })().catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;
   }
   if (message?.type === "SUBSCRIPTION_UPDATE_FAILED") {
-    chrome.storage.local.set({ tubeShelfScanStatus: { state: "failed", count: Number(message.count) || 0, completedAt: Date.now(), error: String(message.error || "") } })
+    chrome.storage.local.set({ chanlumeScanStatus: { state: "failed", count: Number(message.count) || 0, completedAt: Date.now(), error: String(message.error || "") } })
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ ok: false, error: String(error) }));
     return true;

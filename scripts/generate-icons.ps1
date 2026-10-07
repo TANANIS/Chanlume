@@ -54,4 +54,4 @@ foreach ($size in @(16, 32, 48, 128)) {
     $bitmap.Dispose()
 }
 
-Write-Output "Generated TubeShelf icons in $resolvedOutput"
+Write-Output "Generated Chanlume icons in $resolvedOutput"

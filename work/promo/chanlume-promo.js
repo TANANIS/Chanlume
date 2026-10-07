@@ -60,7 +60,7 @@
     if (icon.complete) ctx.drawImage(icon, x, y, size, size);
     else { rr(x, y, size, size, size * .28, '#7c5cff'); text('▶', x + size / 2, y + size * .68, size * .42, '#fff', 800, 'center'); }
     ctx.restore();
-    if (withWord) text('TubeShelf', x + size + 14, y + size * .68, size * .43, light ? '#ffffff' : '#141319', 750);
+    if (withWord) text('Chanlume', x + size + 14, y + size * .68, size * .43, light ? '#ffffff' : '#141319', 750);
   }
 
   function backdrop(darkness = 0) {
@@ -114,7 +114,7 @@
     navItem(189, '▤', '媒體庫', false, dark);
     line(14, 218, 212, 218, colorMix('#e9e9e9', '#292929', dark));
     const expand = overrideProgress === null ? phase(t, 5.1, 6.2) : clamp(overrideProgress);
-    text('TubeShelf', 22, 252, 14, tc, 700);
+    text('Chanlume', 22, 252, 14, tc, 700);
     text('⌄', 198, 252, 16, muted, 600, 'center');
     text(expand < .5 ? '已折疊' : '群組', 22, 272, 10, muted, 500);
     if (expand > .01) {
@@ -182,7 +182,7 @@
       text(card.channel.slice(0, 1), x + 17, y + 181, 12, '#fff', 750, 'center');
       text(card.title, x + 45, y + 173, 14, tc, 650);
       text(`${card.channel} · 2 天前`, x + 45, y + 192, 11, muted, 450);
-      text('TubeShelf 分類', x + 45, y + 214, 10, muted, 500);
+      text('Chanlume 分類', x + 45, y + 214, 10, muted, 500);
       rr(x + 132, y + 198, 52, 22, 7, colorMix('#ede9ff', '#2d2742', dark));
       text(card.group, x + 158, y + 213, 10, colorMix('#6a4adb', '#c8bcff', dark), 700, 'center');
     });
@@ -262,7 +262,7 @@
       text('版本 1.18.3', 1085, 90, 12, '#c7bbff', 700, 'center');
       text(outro ? '訂閱很多，也能井然有序。' : '把 YouTube 訂閱，', 96, 250 + yShift, outro ? 42 : 59, '#ffffff', 760);
       if (!outro) text('變成你的書架。', 96, 320 + yShift, 59, '#ffffff', 760);
-      text(outro ? '免費安裝 TubeShelf' : '分組、篩選、專注，一切留在本機。', 98, outro ? 334 : 374, outro ? 24 : 22, '#b8b3c4', 480);
+      text(outro ? '免費安裝 Chanlume' : '分組、篩選、專注，一切留在本機。', 98, outro ? 334 : 374, outro ? 24 : 22, '#b8b3c4', 480);
       if (outro) {
         rr(96, 386, 300, 58, 17, '#7455e9');
         text('前往 Chrome 線上應用程式商店  →', 246, 422, 15, '#fff', 720, 'center');
@@ -310,7 +310,7 @@
           text('不用再打開頻道確認。', 88, 559, 11, '#aaa4b2', 500);
         });
       }
-      caption('03', '分類直接顯示在影片資訊下方', '已存入 TubeShelf 的頻道才會顯示；沒有資料就保持乾淨。', phase(t, 17.2, 18.0) * (1 - phase(t, 23.1, 23.9)));
+      caption('03', '分類直接顯示在影片資訊下方', '已存入 Chanlume 的頻道才會顯示；沒有資料就保持乾淨。', phase(t, 17.2, 18.0) * (1 - phase(t, 23.1, 23.9)));
     } else if (t < 31.1) {
       const light = phase(t, 24.5, 26.2);
       const returnDark = phase(t, 29.0, 30.4);
@@ -318,7 +318,7 @@
       drawYouTubeScene(t, { dark: clamp(dark), sidebar: 1, wrap: 1, selected: '學習', filter: true });
       const sunAlpha = phase(t, 25, 26) * (1 - phase(t, 29, 30));
       alphaLayer(sunAlpha, () => { rr(1167, 90, 66, 32, 16, '#fff', '#ddd'); text('☀', 1183, 112, 15, '#ef9e20', 600, 'center'); text('淺色', 1208, 111, 10, '#555', 650, 'center'); });
-      caption('04', 'TubeShelf 跟著 YouTube 一起變色', '切換深色或淺色，不需要再設定一次。', phase(t, 24.2, 25) * (1 - phase(t, 30.1, 30.9)));
+      caption('04', 'Chanlume 跟著 YouTube 一起變色', '切換深色或淺色，不需要再設定一次。', phase(t, 24.2, 25) * (1 - phase(t, 30.1, 30.9)));
     } else if (t < 37.25) {
       const p = phase(t, 31.3, 32.5);
       drawYouTubeScene(t, { dark: 1, sidebar: 1, wrap: 1, selected: '學習', filter: true, dim: .42 * p });
@@ -400,7 +400,7 @@
     await document.fonts.ready;
     if (!icon.complete) await new Promise(resolve => { icon.onload = resolve; icon.onerror = resolve; });
     const duration = Number.isFinite(options.duration) ? Math.max(.5, options.duration) : DURATION;
-    const filename = options.filename || 'TubeShelf-1.18.3-intro.mp4';
+    const filename = options.filename || 'Chanlume-1.18.3-intro.mp4';
     const fps = 30;
     const videoStream = canvas.captureStream(0);
     const videoTrack = videoStream.getVideoTracks()[0];
@@ -494,7 +494,7 @@
     const dinf = box('dinf', dref);
 
     const compressor = new Uint8Array(32);
-    const compressorName = ascii('TubeShelf H.264');
+    const compressorName = ascii('Chanlume H.264');
     compressor[0] = compressorName.length;
     compressor.set(compressorName, 1);
     const avc1 = box('avc1',
@@ -528,7 +528,7 @@
     await document.fonts.ready;
     if (!icon.complete) await new Promise(resolve => { icon.onload = resolve; icon.onerror = resolve; });
     const duration = Number.isFinite(options.duration) ? Math.max(.5, options.duration) : DURATION;
-    const filename = options.filename || 'TubeShelf-1.18.3-intro.mp4';
+    const filename = options.filename || 'Chanlume-1.18.3-intro.mp4';
     const fps = Number.isFinite(options.fps) ? options.fps : 30;
     const frameCount = Math.round(duration * fps);
     const frameDuration = Math.round(1_000_000 / fps);

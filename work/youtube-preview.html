@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TubeShelf YouTube 整合預覽</title>
+    <title>Chanlume YouTube 整合預覽</title>
     <style>
       * { box-sizing: border-box; } body { margin: 0; color: #f1f1f1; background: #0f0f0f; font: 14px Arial,sans-serif; }
       header { height: 64px; display: flex; align-items: center; gap: 24px; padding: 0 24px; border-bottom: 1px solid #272727; position: sticky; top: 0; background: #0f0f0f; }
@@ -25,7 +25,7 @@
     </div></div></ytd-browse></div>
     <script>
       const demoState = {version:1,channels:{"/@kurzgesagt":{id:"/@kurzgesagt",name:"Kurzgesagt"},"/@lofigirl":{id:"/@lofigirl",name:"Lofi Girl"},"/@gamemakers":{id:"/@gamemakers",name:"Game Maker's Toolkit"}},groups:[{id:"learning",name:"學習",icon:"book",color:"#7c5cff",channelIds:["/@kurzgesagt"]},{id:"relax",name:"放鬆",icon:"music",color:"#ff6b8a",channelIds:["/@lofigirl"]},{id:"games",name:"遊戲設計",icon:"game",color:"#2dbd9b",channelIds:["/@gamemakers"]}],settings:{hideShorts:false,hideWatched:false,compactMode:false}};
-      window.chrome={storage:{local:{get:async()=>({tubeShelfState:demoState}),set:async()=>{}},onChanged:{addListener:()=>{}}},runtime:{sendMessage:()=>{},onMessage:{addListener:()=>{}}}};
+      window.chrome={storage:{local:{get:async()=>({chanlumeState:demoState}),set:async()=>{}},onChanged:{addListener:()=>{}}},runtime:{sendMessage:()=>{},onMessage:{addListener:()=>{}}}};
     </script>
     <script src="/extension/shared.js"></script><script src="/extension/content/content.js"></script>
   </body>

@@ -5,9 +5,9 @@ body { margin:0; font-family:Arial,sans-serif; background:#fff; } html[dark] bod
 ytd-guide-renderer { display:block; width:230px; position:fixed; top:20px; left:0; } ytd-browse { display:block; margin-left:240px; } #primary { width:100%; } #native-feed { padding:40px; }
 </style>
 <script src="/extension/shared.js"></script><script>
-  const initialHash = location.hash || '#tubeshelf-group=all';
+  const initialHash = location.hash || '#chanlume-group=all';
   history.replaceState({}, '', '/feed/subscriptions' + initialHash);
-  let state = TubeShelfCore.normalizeState(JSON.parse(localStorage.getItem('favorite-fixture') || 'null') || {
+  let state = ChanlumeCore.normalizeState(JSON.parse(localStorage.getItem('favorite-fixture') || 'null') || {
     channels: { '/@science': { name: 'Science Studio' }, '/@design': { name: 'Design Notes' }, '/@music': { name: 'Quiet Music' }, '/@empty': { name: 'No Uploads' } },
     groups: [{ id:'learning', name:'Learning', icon:'book', color:'#7c5cff', channelIds:['/@science'] }],
     settings: { language:'en', onboardingComplete:true }
@@ -18,16 +18,16 @@ ytd-guide-renderer { display:block; width:230px; position:fixed; top:20px; left:
   globalThis.__failSave = false;
   let listener;
   globalThis.__state = () => state;
-  globalThis.__change = (next) => { const old=state; state=TubeShelfCore.normalizeState(next); localStorage.setItem('favorite-fixture',JSON.stringify(state)); listener?.({tubeShelfState:{oldValue:old,newValue:state}},'local'); };
+  globalThis.__change = (next) => { const old=state; state=ChanlumeCore.normalizeState(next); localStorage.setItem('favorite-fixture',JSON.stringify(state)); listener?.({chanlumeState:{oldValue:old,newValue:state}},'local'); };
   globalThis.chrome = {
-    storage: { local: { get: async () => ({tubeShelfState:state}) }, onChanged:{addListener:fn=>listener=fn} },
+    storage: { local: { get: async () => ({chanlumeState:state}) }, onChanged:{addListener:fn=>listener=fn} },
     runtime: { onMessage:{addListener:()=>{}}, sendMessage: async (message) => {
-      if(message.type==='TUBESHELF_MUTATE') {
+      if(message.type==='CHANLUME_MUTATE') {
         __operations.push(message.operation);
         if (__failSave) return {ok:false,error:'Fixture save failure'};
-        const next=TubeShelfCore.applyStateOperation(state,message.operation); next.revision=state.revision+1; __change(next); return {ok:true,state};
+        const next=ChanlumeCore.applyStateOperation(state,message.operation); next.revision=state.revision+1; __change(next); return {ok:true,state};
       }
-      if(message.type==='TUBESHELF_FAVORITE_FEED') {
+      if(message.type==='CHANLUME_FAVORITE_FEED') {
         __feedCalls.push(message);
         const hideShorts = state.settings.hideShorts;
         await new Promise(resolve=>setTimeout(resolve,globalThis.__feedDelay || 50));

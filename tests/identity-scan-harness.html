@@ -7,7 +7,7 @@
       history.replaceState({}, "", "/feed/channels");
       globalThis.__capturedIdentities = [];
       window.addEventListener("message", (event) => {
-        if (event.data?.source === "tubeshelf-identity-bridge" && event.data?.type === "CHANNEL_IDENTITY") globalThis.__capturedIdentities.push(event.data);
+        if (event.data?.source === "chanlume-identity-bridge" && event.data?.type === "CHANNEL_IDENTITY") globalThis.__capturedIdentities.push(event.data);
       });
     </script>
   </head>
@@ -19,6 +19,6 @@
       };
     </script>
     <script src="/extension/content/identity-bridge.js"></script>
-    <script>window.postMessage({ source: "tubeshelf-identity-bridge", type: "SET_ENABLED", enabled: true }, location.origin);</script>
+    <script>window.postMessage({ source: "chanlume-identity-bridge", type: "SET_ENABLED", enabled: true }, location.origin);</script>
   </body>
 </html>

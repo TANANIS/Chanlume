@@ -45,8 +45,8 @@ async function installContent(page, settings) {
     window.chrome = {
       storage: {
         local: {
-          get: async () => ({ tubeShelfState: window.__savedState }),
-          set: async (value) => { window.__savedState = value.tubeShelfState; }
+          get: async () => ({ chanlumeState: window.__savedState }),
+          set: async (value) => { window.__savedState = value.chanlumeState; }
         },
         onChanged: { addListener: () => {} }
       },
@@ -64,11 +64,11 @@ async function installContent(page, settings) {
   await page.addStyleTag({ path: cssPath });
   await page.addScriptTag({ path: sharedPath });
   await page.addScriptTag({ path: contentPath });
-  await page.waitForSelector("#tubeshelf-panel");
+  await page.waitForSelector("#chanlume-panel");
   await page.waitForTimeout(350);
-  assert.equal(await page.locator("html").evaluate((node) => node.classList.contains("tubeshelf-hide-secondary")), true);
-  assert.equal(await page.locator("#short-card").evaluate((node) => node.classList.contains("tubeshelf-shorts-hidden")), true);
-  assert.equal(await page.locator("#watched-card").evaluate((node) => node.classList.contains("tubeshelf-hidden")), true);
+  assert.equal(await page.locator("html").evaluate((node) => node.classList.contains("chanlume-hide-secondary")), true);
+  assert.equal(await page.locator("#short-card").evaluate((node) => node.classList.contains("chanlume-shorts-hidden")), true);
+  assert.equal(await page.locator("#watched-card").evaluate((node) => node.classList.contains("chanlume-hidden")), true);
   assert.notEqual(await page.locator("#normal-card").evaluate((node) => getComputedStyle(node).display), "none");
   assert.equal(await page.locator("#home-guide").evaluate((node) => getComputedStyle(node).display), "none");
   assert.equal(await page.locator("#shorts-guide").evaluate((node) => getComputedStyle(node).display), "none");
@@ -76,9 +76,9 @@ async function installContent(page, settings) {
   assert.equal(await page.locator(".ytp-autonav-toggle-button").getAttribute("aria-checked"), "false");
   assert.notEqual(await page.locator("ytd-guide-renderer").evaluate((node) => getComputedStyle(node).display), "none");
   assert.equal(await page.locator("ytd-watch-flexy #secondary").evaluate((node) => getComputedStyle(node).display), "none");
-  assert.equal(await page.locator('#tubeshelf-toolbar > .ts-toolbar-tools > button').count(), 1);
-  assert.equal(await page.locator('#tubeshelf-toolbar [data-ts-setting]').count(), 0);
-  assert.equal(await page.locator('#tubeshelf-toolbar [data-ts-action="update-subscriptions"]').count(), 0);
+  assert.equal(await page.locator('#chanlume-toolbar > .cl-toolbar-tools > button').count(), 1);
+  assert.equal(await page.locator('#chanlume-toolbar [data-cl-setting]').count(), 0);
+  assert.equal(await page.locator('#chanlume-toolbar [data-cl-action="update-subscriptions"]').count(), 0);
   await page.screenshot({ path: path.join(root, "work", "v1111-one-gear.png"), fullPage: true });
   await page.evaluate(() => {
     const card = document.createElement("ytd-rich-item-renderer");
@@ -87,11 +87,11 @@ async function installContent(page, settings) {
     document.querySelector("ytd-browse #contents").append(card);
   });
   await page.waitForTimeout(260);
-  assert.equal(await page.locator("#dynamic-watched-card").evaluate((node) => node.classList.contains("tubeshelf-hidden")), true);
-  await page.locator('#tubeshelf-toolbar [data-ts-action="manage"]').click();
-  assert.equal(await page.locator('#tubeshelf-panel [data-action="home"]').isHidden(), true);
-  assert.equal(await page.locator("#tubeshelf-panel").getByText("Subscription groups", { exact: true }).count(), 1);
-  assert.equal(await page.locator("#tubeshelf-panel").getByText("Block Shorts", { exact: true }).count(), 1);
+  assert.equal(await page.locator("#dynamic-watched-card").evaluate((node) => node.classList.contains("chanlume-hidden")), true);
+  await page.locator('#chanlume-toolbar [data-cl-action="manage"]').click();
+  assert.equal(await page.locator('#chanlume-panel [data-action="home"]').isHidden(), true);
+  assert.equal(await page.locator("#chanlume-panel").getByText("Subscription groups", { exact: true }).count(), 1);
+  assert.equal(await page.locator("#chanlume-panel").getByText("Block Shorts", { exact: true }).count(), 1);
   await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(root, "work", "v1140-panel-en.png"), fullPage: true });
   await page.close();
@@ -108,26 +108,26 @@ async function installContent(page, settings) {
       settings: { blockHome: false, hideShorts: false, hideSecondary: false, disableAutoplay: false, hideWatched: false, compactMode: false, onboardingComplete: true, language: "en" }
     };
     window.chrome = {
-      storage: { local: { get: async () => ({ tubeShelfState: window.__savedState }), set: async (value) => { window.__savedState = value.tubeShelfState; } }, onChanged: { addListener: () => {} } },
+      storage: { local: { get: async () => ({ chanlumeState: window.__savedState }), set: async (value) => { window.__savedState = value.chanlumeState; } }, onChanged: { addListener: () => {} } },
       runtime: { sendMessage: async () => ({ ok: true }), onMessage: { addListener: () => {} } }
     };
   });
   await page.route("https://www.youtube.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: channelWatchHtml }));
-  await page.goto("https://www.youtube.com/watch?v=tubeshelf-test");
+  await page.goto("https://www.youtube.com/watch?v=chanlume-test");
   await page.addStyleTag({ path: cssPath });
   await page.addScriptTag({ path: sharedPath });
   await page.addScriptTag({ path: contentPath });
-  await page.waitForSelector("#tubeshelf-channel-control");
-  assert.equal(await page.locator(".ts-current-trigger").textContent().then((text) => text.trim()), "Groups");
-  assert.equal(await page.locator("[data-ts-current-group]").isDisabled(), true);
+  await page.waitForSelector("#chanlume-channel-control");
+  assert.equal(await page.locator(".cl-current-trigger").textContent().then((text) => text.trim()), "Groups");
+  assert.equal(await page.locator("[data-cl-current-group]").isDisabled(), true);
   await page.evaluate(() => {
     const renderer = document.querySelector("ytd-subscribe-button-renderer");
     renderer.setAttribute("subscribed", "");
     renderer.innerHTML = '<button aria-label="Unsubscribe from Test Creator"><span>Subscribed</span></button>';
   });
   await page.waitForFunction(() => Boolean(window.__savedState.channels["/@testcreator"]));
-  await page.locator(".ts-current-trigger").click();
-  await page.locator("[data-ts-current-group]").check();
+  await page.locator(".cl-current-trigger").click();
+  await page.locator("[data-cl-current-group]").check();
   await page.waitForFunction(() => window.__savedState.groups[0].channelIds.includes("/@testcreator"));
   await page.screenshot({ path: path.join(root, "work", "v1140-channel-groups-en.png"), fullPage: true });
   await page.evaluate(() => {
@@ -145,17 +145,17 @@ async function installContent(page, settings) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.addInitScript(() => {
     window.__savedState = { version: 10, groups: [{ id: "news", name: "News", icon: "star", color: "#f0a44b", channelIds: [] }], channels: {}, manualLabels: {}, settings: { language: "en", onboardingComplete: true } };
-    window.chrome = { storage: { local: { get: async () => ({ tubeShelfState: window.__savedState }), set: async (value) => { window.__savedState = value.tubeShelfState; } }, onChanged: { addListener: () => {} } }, runtime: { sendMessage: async () => ({ ok: true }), onMessage: { addListener: () => {} } } };
+    window.chrome = { storage: { local: { get: async () => ({ chanlumeState: window.__savedState }), set: async (value) => { window.__savedState = value.chanlumeState; } }, onChanged: { addListener: () => {} } }, runtime: { sendMessage: async () => ({ ok: true }), onMessage: { addListener: () => {} } } };
   });
   await page.route("https://www.youtube.com/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: channelPageHtml }));
   await page.goto("https://www.youtube.com/@channelhome");
   await page.addStyleTag({ path: cssPath });
   await page.addScriptTag({ path: sharedPath });
   await page.addScriptTag({ path: contentPath });
-  await page.waitForSelector("#tubeshelf-channel-control");
-  assert.equal(await page.locator("[data-ts-current-group]").isEnabled(), true);
-  await page.locator(".ts-current-trigger").click();
-  await page.locator("[data-ts-current-group]").check();
+  await page.waitForSelector("#chanlume-channel-control");
+  assert.equal(await page.locator("[data-cl-current-group]").isEnabled(), true);
+  await page.locator(".cl-current-trigger").click();
+  await page.locator("[data-cl-current-group]").check();
   await page.waitForFunction(() => window.__savedState.groups[0].channelIds.includes("/@channelhome"));
   assert.equal(await page.evaluate(() => window.__savedState.channels["/@channelhome"].name), "Channel Home Creator");
   await page.close();
@@ -213,7 +213,7 @@ async function installContent(page, settings) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto("http://127.0.0.1:8765/extension/dashboard/dashboard.html?tour=1");
   await page.waitForFunction(() => !document.getElementById("onboarding")?.hidden);
-  assert.equal(await page.locator("#onboarding-title").textContent(), "歡迎使用 TubeShelf");
+  assert.equal(await page.locator("#onboarding-title").textContent(), "歡迎使用 Chanlume");
   assert.equal(await page.locator("#onboarding-dots span").count(), 6);
   await page.locator("#onboarding-next").click();
   await page.waitForTimeout(450);
@@ -253,7 +253,7 @@ async function installContent(page, settings) {
   });
   await page.goto("http://127.0.0.1:8765/extension/dashboard/dashboard.html");
   await page.locator('[data-view="settings"]').click();
-  await page.locator("#youtube-api-key").fill("AIzaMockTubeShelfKey123456789");
+  await page.locator("#youtube-api-key").fill("AIzaMockChanlumeKey123456789");
   await page.locator("#save-youtube-api-key").click();
   assert.match(await page.locator("#youtube-api-status").textContent(), /已在本機設定/);
   await page.locator('[data-view="library"]').click();

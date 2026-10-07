@@ -10,11 +10,11 @@
       ytd-rich-section-renderer, ytd-rich-shelf-renderer { display: block; padding: 12px; }
     </style>
     <script>
-      history.replaceState({}, "", "/feed/subscriptions#tubeshelf-group=all");
+      history.replaceState({}, "", "/feed/subscriptions#chanlume-group=all");
       globalThis.chrome = {
         storage: {
           local: {
-            get: async () => ({ tubeShelfState: {
+            get: async () => ({ chanlumeState: {
               version: 14,
               revision: 0,
               groups: [

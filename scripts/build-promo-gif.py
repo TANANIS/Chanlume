@@ -6,7 +6,7 @@ from PIL import Image
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build TubeShelf preview GIF from deterministic PNG frames.")
+    parser = argparse.ArgumentParser(description="Build Chanlume preview GIF from deterministic PNG frames.")
     parser.add_argument("frames", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--width", type=int, default=800)

@@ -1,9 +1,9 @@
 (function () {
   "use strict";
 
-  if (window.top !== window || window.__tubeShelfIdentityBridge) return;
-  window.__tubeShelfIdentityBridge = true;
-  const SOURCE = "tubeshelf-identity-bridge";
+  if (window.top !== window || window.__chanlumeIdentityBridge) return;
+  window.__chanlumeIdentityBridge = true;
+  const SOURCE = "chanlume-identity-bridge";
   const identities = new Map();
   let inspected = new WeakMap();
   let retryCounts = new WeakMap();

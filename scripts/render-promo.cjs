@@ -10,9 +10,9 @@ const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
 const outputDir = path.join(root, 'outputs', 'promo');
 const framesDir = path.join(root, 'work', 'promo', 'frames');
-const introPath = path.join(outputDir, 'TubeShelf-1.18.3-intro.mp4');
-const gifPath = path.join(outputDir, 'TubeShelf-1.18.3-preview.gif');
-const posterPath = path.join(outputDir, 'TubeShelf-1.18.3-poster.png');
+const introPath = path.join(outputDir, 'Chanlume-1.19.3-intro.mp4');
+const gifPath = path.join(outputDir, 'Chanlume-1.19.3-preview.gif');
+const posterPath = path.join(outputDir, 'Chanlume-1.19.3-poster.png');
 const python = process.env.CODEX_PYTHON || 'C:\\Users\\JSrad\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe';
 const port = 8777;
 
@@ -64,7 +64,7 @@ async function main() {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1, acceptDownloads: true });
-    await page.goto(`http://127.0.0.1:${port}/work/promo/tubeshelf-promo.html`, { waitUntil: 'networkidle' });
+    await page.goto(`http://127.0.0.1:${port}/work/promo/chanlume-promo.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => window.__ready === true);
 
     if (!videoOnly) {
@@ -88,10 +88,10 @@ async function main() {
 
     const gifMetadata = readGifMetadata(gifPath);
     const manifest = {
-      product: 'TubeShelf',
-      version: '1.18.3',
+      product: 'Chanlume',
+      version: '1.19.3',
       generatedAt: new Date().toISOString(),
-      source: ['work/promo/tubeshelf-promo.html', 'work/promo/tubeshelf-promo.js', 'scripts/render-promo.cjs', 'scripts/build-promo-gif.py'],
+      source: ['work/promo/chanlume-promo.html', 'work/promo/chanlume-promo.js', 'scripts/render-promo.cjs', 'scripts/build-promo-gif.py'],
       storeUrl: 'https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole?utm_source=item-share-cb',
       privacy: 'All channel names, video titles, counts, and thumbnails shown are fictional mock data.',
       outputs: [

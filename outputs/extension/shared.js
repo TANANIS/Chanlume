@@ -1,12 +1,30 @@
 (function (root, factory) {
   const api = factory();
-  root.TubeShelfCore = api;
+  root.ChanlumeCore = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
   const VERSION = 15;
   const LANGUAGES = ["zh-TW", "en"];
+  // Read-only compatibility for installations predating the Chanlume rename.
+  const LEGACY_STORAGE_KEYS = {
+    chanlumeState: "tubeShelfState",
+    chanlumeYouTubeApiKey: "tubeShelfYouTubeApiKey",
+    chanlumeScanStatus: "tubeShelfScanStatus"
+  };
+  async function readStoredValues(storage, keys) {
+    const requested = Array.isArray(keys) ? keys : [keys];
+    const values = await storage.get([...requested, ...requested.map((key) => LEGACY_STORAGE_KEYS[key]).filter(Boolean)]);
+    for (const key of requested) {
+      if (values[key] === undefined && values[LEGACY_STORAGE_KEYS[key]] !== undefined) values[key] = values[LEGACY_STORAGE_KEYS[key]];
+    }
+    return values;
+  }
+
+  function canonicalHash(hash) {
+    return String(hash).replace(/([#&])tubeshelf-(group|view|update-subscriptions)(?==|&|$)/g, "$1chanlume-$2");
+  }
   const UI_TEXT_EN = {
     "點擊頻道可在 YouTube 開啟；使用詳細資料調整分類。": "Open a channel on YouTube; use Details to edit its groups.",
     "在 YouTube 開啟": "Open on YouTube", "詳細資料": "Details",
@@ -34,17 +52,17 @@
     "重試": "Retry", "移除關注": "Remove favorite", "已儲存變更": "Changes saved", "儲存失敗，請重試。": "Could not save changes. Please retry.",
     "尚未更新": "Not updated yet", "上次更新": "Last updated", "新增或移除頻道，儲存後套用。": "Add or remove channels, then save to apply.",
     "你的訂閱，照你的方式排好": "Your subscriptions, organized your way",
-    "管理群組": "Manage groups", "管理 TubeShelf 群組": "Manage TubeShelf groups",
-    "開啟 TubeShelf": "Open TubeShelf", "開啟 TubeShelf 訂閱整理": "Open TubeShelf subscription organizer",
-    "開啟 TubeShelf 群組與設定": "Open TubeShelf groups and settings", "已整理": "Organized",
+    "管理群組": "Manage groups", "管理 Chanlume 群組": "Manage Chanlume groups",
+    "開啟 Chanlume": "Open Chanlume", "開啟 Chanlume 訂閱整理": "Open Chanlume subscription organizer",
+    "開啟 Chanlume 群組與設定": "Open Chanlume groups and settings", "已整理": "Organized",
     "個頻道": "channels", "個已找到頻道": "channels found", "YouTube 內容來源": "YouTube content source",
     "首頁推薦": "Home recommendations", "YouTube 演算法": "YouTube algorithm", "訂閱內容": "Subscriptions",
-    "TubeShelf 群組": "TubeShelf groups", "快速開啟": "Quick access", "＋ 新增群組": "+ New group",
-    "支持 TubeShelf｜請我喝杯咖啡 ↗": "Support TubeShelf · Buy me a coffee ↗",
+    "Chanlume 群組": "Chanlume groups", "快速開啟": "Quick access", "＋ 新增群組": "+ New group",
+    "支持 Chanlume｜請我喝杯咖啡 ↗": "Support Chanlume · Buy me a coffee ↗",
     "支持與回饋 ↗": "Support & feedback ↗",
-    "關閉 TubeShelf，恢復原本 YouTube": "Turn off TubeShelf and restore YouTube",
-    "啟用 TubeShelf": "Turn on TubeShelf",
-    "TubeShelf 已關閉": "TubeShelf is off",
+    "關閉 Chanlume，恢復原本 YouTube": "Turn off Chanlume and restore YouTube",
+    "啟用 Chanlume": "Turn on Chanlume",
+    "Chanlume 已關閉": "Chanlume is off",
     "正在使用原本 YouTube，群組與設定已保留": "Original YouTube is active. Your groups and settings are saved.",
     "電源切換失敗，請再試一次": "Could not change power state. Please try again.",
     "回報問題・許願功能": "Report an issue · Suggest a feature",
@@ -58,7 +76,7 @@
     "目前是 YouTube 其他頁面": "Another YouTube page", "目前不是 YouTube 分頁": "Not a YouTube tab",
     "將自動前往訂閱內容": "You will be redirected to subscriptions", "首頁保留 YouTube 演算法": "Home uses YouTube's algorithm",
     "可以使用群組與畫面整理": "Groups and display filters are available", "前往訂閱內容即可使用群組": "Open subscriptions to use groups",
-    "TubeShelf 管理中心": "TubeShelf Manager", "本機訂閱整理": "Local subscription organizer", "我的書架": "My shelf",
+    "Chanlume 管理中心": "Chanlume Manager", "本機訂閱整理": "Local subscription organizer", "我的書架": "My shelf",
     "偏好設定": "Preferences", "只存在這台裝置": "Stored only on this device",
     "不會上傳你的訂閱與群組": "Your subscriptions and groups are never uploaded", "訂閱書架": "Subscription shelf",
     "把頻道放進不同群組，回到 YouTube 就能一鍵篩選。": "Put channels into groups, then filter them on YouTube with one click.",
@@ -86,13 +104,13 @@
     "儲存 Key": "Save key", "清除": "Clear", "備份與搬移": "Backup and transfer",
     "匯出檔包含群組與頻道網址，不含觀看紀錄。": "Exports include groups and channel URLs, but not watch history.",
     "匯出 JSON": "Export JSON", "匯入 JSON": "Import JSON", "重新開始": "Start over",
-    "清除 TubeShelf 儲存的頻道與群組，不會取消 YouTube 訂閱。": "Clear TubeShelf channels and groups without unsubscribing on YouTube.",
+    "清除 Chanlume 儲存的頻道與群組，不會取消 YouTube 訂閱。": "Clear Chanlume channels and groups without unsubscribing on YouTube.",
     "清除本機資料": "Clear local data", "介面語言": "Interface language",
-    "選擇 TubeShelf 的顯示語言。群組與頻道名稱不會被改寫。": "Choose TubeShelf's display language. Group and channel names are not changed.",
+    "選擇 Chanlume 的顯示語言。群組與頻道名稱不會被改寫。": "Choose Chanlume's display language. Group and channel names are not changed.",
     "群組名稱": "Group name", "例如：遊戲精華": "For example: Gaming highlights", "圖示": "Icon", "顏色": "Color",
     "刪除群組": "Delete group", "取消": "Cancel", "儲存群組": "Save group", "關閉": "Close",
     "自動整理群組": "Auto-organize groups", "只分析尚未分類的頻道": "Analyze only unclassified channels",
-    "TubeShelf 會讀取公開頻道簡介與近期影片，透過細分類字典、重複主題與你之後的手動修正產生建議；若已設定 YouTube API Key，也會加入官方分類。既有群組不會被覆寫。": "TubeShelf uses public channel descriptions, recent videos, a detailed local taxonomy, repeated topics, and your later corrections. If an API key is configured, official YouTube categories are included. Existing groups are never overwritten.",
+    "Chanlume 會讀取公開頻道簡介與近期影片，透過細分類字典、重複主題與你之後的手動修正產生建議；若已設定 YouTube API Key，也會加入官方分類。既有群組不會被覆寫。": "Chanlume uses public channel descriptions, recent videos, a detailed local taxonomy, repeated topics, and your later corrections. If an API key is configured, official YouTube categories are included. Existing groups are never overwritten.",
     "不使用雲端 AI": "No cloud AI", "低信心也列入建議": "Low-confidence results included", "確認後才套用": "Applied only after confirmation",
     "正在準備本機分析": "Preparing local analysis", "檢查已儲存的頻道資料…": "Checking saved channel data…",
     "個頻道有分類建議": "channels have suggestions", "取消勾選不想建立的群組。只有按下「套用建議」才會修改群組。": "Uncheck groups you do not want. Groups change only after you select Apply suggestions.",
@@ -112,7 +130,7 @@
     "無法更新訂閱內容，請重新載入擴充套件": "Could not update subscriptions. Reload the extension.",
     "訂閱內容已更新": "Subscriptions updated", "正在更新訂閱內容": "Updating subscriptions",
     "這個分頁即將自動關閉。": "This tab will close automatically.",
-    "TubeShelf 正在自動向下載入所有訂閱頻道，請暫時不要關閉這個分頁。": "TubeShelf is loading every subscribed channel. Please keep this tab open for now.",
+    "Chanlume 正在自動向下載入所有訂閱頻道，請暫時不要關閉這個分頁。": "Chanlume is loading every subscribed channel. Please keep this tab open for now.",
     "更新未完成": "Update incomplete", "請確認 YouTube 的所有訂閱頻道頁能正常顯示，再重新執行。": "Make sure YouTube's subscribed-channels page loads correctly, then try again.",
     "本次找到的頻道比現有書架少太多，已保留原資料以避免分類遺失。請確認清單完整，或手動確認使用本次結果。": "This scan found far fewer channels than the current shelf. Existing data was preserved to prevent classification loss. Check that the list is complete or manually confirm this result.",
     "仍以本次清單更新": "Use this scan anyway",
@@ -126,7 +144,7 @@
     "找不到符合的頻道": "No matching channels", "這裡目前沒有頻道": "There are no channels here yet", "書架還是空的": "Your shelf is empty",
     "換個關鍵字再試一次。": "Try another search term.",
     "可從頻道詳細資料調整群組，或執行本機自動整理。": "Adjust groups in channel details or run local auto-organization.",
-    "按「更新訂閱內容」，TubeShelf 就會自動載入全部 YouTube 訂閱頻道。": "Select Update subscriptions and TubeShelf will load every subscribed YouTube channel.",
+    "按「更新訂閱內容」，Chanlume 就會自動載入全部 YouTube 訂閱頻道。": "Select Update subscriptions and Chanlume will load every subscribed YouTube channel.",
     "尚未分類": "Unclassified", "待": "Pending", "尚未建立群組": "No groups created yet",
     "高信心": "High confidence", "中等信心": "Medium confidence", "低信心": "Low confidence", "建議": "Suggestion",
     "目前沒有明確建議": "No clear suggestion", "沒有足夠且唯一的主題訊號": "Not enough distinct topic signals",
@@ -142,13 +160,13 @@
     "正在更新全部訂閱內容": "Updating all subscriptions", "設定已儲存": "Settings saved",
     "請至少選擇一個分類建議": "Select at least one suggestion", "請輸入有效的 YouTube Data API Key": "Enter a valid YouTube Data API key",
     "API Key 已儲存在本機，且不會匯出到備份": "API key saved locally and excluded from backups", "YouTube API Key 已清除": "YouTube API key cleared",
-    "備份已匯出": "Backup exported", "備份已匯入": "Backup imported", "這不是有效的 TubeShelf 備份": "This is not a valid TubeShelf backup",
-    "本機資料已清除": "Local data cleared", "已跳過新手教學，可直接開始使用": "Tutorial skipped; TubeShelf is ready to use",
+    "備份已匯出": "Backup exported", "備份已匯入": "Backup imported", "這不是有效的 Chanlume 備份": "This is not a valid Chanlume backup",
+    "本機資料已清除": "Local data cleared", "已跳過新手教學，可直接開始使用": "Tutorial skipped; Chanlume is ready to use",
     "訂閱內容更新未完成，請再試一次": "Subscription update incomplete. Try again.",
-    "歡迎使用 TubeShelf": "Welcome to TubeShelf", "開始教學": "Start tutorial",
+    "歡迎使用 Chanlume": "Welcome to Chanlume", "開始教學": "Start tutorial",
     "這份教學會陪你完成第一次更新、第一次本機自動整理，以及日後手動管理群組的方法。所有資料只留在這台裝置。": "This tutorial covers your first subscription update, first local auto-organization, and manual group management. All data stays on this device.",
     "先建立你的訂閱書架": "Build your subscription shelf first",
-    "按下「更新訂閱內容」後，TubeShelf 會開啟 YouTube 的所有訂閱頁並自動載入完整清單。完成後這個頁面會立即顯示頻道。": "Update subscriptions opens YouTube's subscribed-channels page and loads the full list automatically. Channels appear here as soon as it finishes.",
+    "按下「更新訂閱內容」後，Chanlume 會開啟 YouTube 的所有訂閱頁並自動載入完整清單。完成後這個頁面會立即顯示頻道。": "Update subscriptions opens YouTube's subscribed-channels page and loads the full list automatically. Channels appear here as soon as it finishes.",
     "第一次自動整理": "Your first auto-organization", "開啟自動整理": "Open auto-organizer",
     "自動整理只分析未分類頻道，先提出可勾選的建議；直到你按下「套用建議」才會修改群組。": "Auto-organization analyzes only unclassified channels and presents selectable suggestions. Groups change only after you apply them.",
     "檢查並手動調整": "Review and adjust manually",
@@ -156,7 +174,7 @@
     "依喜好整理 YouTube": "Tune YouTube to your preferences",
     "偏好設定可以封鎖首頁、關閉 Shorts、隱藏影片右欄、關閉自動播放與隱藏已觀看影片；下方也能匯出或匯入備份。": "Preferences can block Home and Shorts, hide the video sidebar, disable autoplay, and hide watched videos. You can also export or import backups.",
     "準備完成": "You're ready", "完成": "Finish",
-    "回到 YouTube 訂閱內容後，可從左側 TubeShelf 群組或頁面上方快速切換。齒輪會直接開啟完整面板。": "On YouTube subscriptions, switch groups from the left sidebar or top toolbar. The gear opens the full panel.",
+    "回到 YouTube 訂閱內容後，可從左側 Chanlume 群組或頁面上方快速切換。齒輪會直接開啟完整面板。": "On YouTube subscriptions, switch groups from the left sidebar or top toolbar. The gear opens the full panel.",
     "更新正在另一個 YouTube 分頁進行；完成後書架會自動更新並帶你到下一步。": "The update is running in another YouTube tab. This shelf will refresh and continue automatically when it finishes.",
     "等待更新完成…": "Waiting for update…", "新手教學已完成": "Tutorial completed", "介面語言已切換為繁體中文": "Interface language changed to Traditional Chinese",
     "繁體中文": "Traditional Chinese", "學習": "Learning", "放鬆": "Relaxation", "全部": "All",
@@ -164,11 +182,11 @@
     "投資與財經": "Finance and investing", "藝術與動畫": "Art and animation", "娛樂與影劇": "Entertainment and screen",
     "美食": "Food", "運動": "Sports", "汽機車": "Vehicles", "動物與寵物": "Animals and pets", "生活": "Lifestyle",
     "更改這個頻道的分類": "Change this channel's groups", "分類": "Groups", "選擇所屬群組": "Choose groups",
-    "收合 TubeShelf 群組": "Collapse TubeShelf groups", "展開 TubeShelf 群組": "Expand TubeShelf groups",
+    "收合 Chanlume 群組": "Collapse Chanlume groups", "展開 Chanlume 群組": "Expand Chanlume groups",
     "目前在未分類": "Currently unclassified", "訂閱後即可分類": "Subscribe to organize this channel",
     "管理全部群組 ↗": "Manage all groups ↗", "請先訂閱這個頻道，再加入群組": "Subscribe to this channel before adding it to a group",
     "已加入未分類，稍後可以選擇群組": "Added to Unclassified; you can choose a group anytime",
-    "已取消訂閱並從 TubeShelf 移除": "Unsubscribed and removed from TubeShelf",
+    "已取消訂閱並從 Chanlume 移除": "Unsubscribed and removed from Chanlume",
     "合併群組": "Merge group", "合併到其他群組": "Merge into another group",
     "將這個群組的頻道搬到目標群組，完成後刪除目前群組。": "Move this group's channels into the target group, then delete the current group.",
     "選擇目標群組": "Choose a destination group", "合併到…": "Merge into…",
@@ -179,7 +197,7 @@
     "目前結果都已在群組中": "All current results are already in this group",
     "目前結果都不在群組中": "None of the current results are in this group",
     "設定已儲存": "Settings saved", "暫時無法更新這個頻道": "Could not refresh this channel right now",
-    "要清除 TubeShelf 的本機群組與已收集頻道嗎？這不會取消 YouTube 訂閱。": "Clear TubeShelf's local groups and collected channels? Your YouTube subscriptions will not change.",
+    "要清除 Chanlume 的本機群組與已收集頻道嗎？這不會取消 YouTube 訂閱。": "Clear Chanlume's local groups and collected channels? Your YouTube subscriptions will not change.",
     "已更新資料，但頻道沒有可讀取的近期影片": "Data refreshed, but no recent video titles were available",
     "正在讀取 YouTube 官方分類…": "Loading official YouTube categories…",
     "正在讀取 YouTube 官方頻道主題": "Loading official YouTube channel topics",
@@ -543,7 +561,7 @@
 
   function subscriptionGroupUrl(groupId) {
     const id = String(groupId || "all");
-    return `https://www.youtube.com/feed/subscriptions#tubeshelf-group=${encodeURIComponent(id)}`;
+    return `https://www.youtube.com/feed/subscriptions#chanlume-group=${encodeURIComponent(id)}`;
   }
 
   function settingsAfterToggle(settings, setting, enabled) {
@@ -1112,7 +1130,7 @@
     const type = String(operation?.type || "");
     const payload = operation?.payload && typeof operation.payload === "object" ? operation.payload : {};
     if (!current.settings.enabled && ["set-subscription", "coalesce-channel-identities", "reconcile-subscription-scan"].includes(type)) {
-      throw Object.assign(new Error("TubeShelf is disabled"), { code: "TUBESHELF_DISABLED" });
+      throw Object.assign(new Error("Chanlume is disabled"), { code: "CHANLUME_DISABLED" });
     }
     if (type === "toggle-membership") {
       let next = payload.channel ? coalesceChannelIdentities(current, payload.channel, payload.aliasIds) : current;
@@ -1254,6 +1272,9 @@
 
   return {
     VERSION,
+    LEGACY_STORAGE_KEYS,
+    readStoredValues,
+    canonicalHash,
     LANGUAGES,
     detectDefaultLanguage,
     languageCode,

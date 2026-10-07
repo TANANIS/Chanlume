@@ -1,8 +1,18 @@
-# TubeShelf Handoff
+# Chanlume Handoff
 
-Updated: 2026-09-10
-Current extension version: **1.19.2 (testing)**
+Updated: 2026-10-08
+Current extension version: **1.19.3 (Chanlume)**
 Current state schema: **15**
+
+## 1.19.3 Chanlume rename
+
+Renamed active product copy, localized manifest titles, JavaScript globals, message types, storage keys, DOM/CSS and data-attribute namespaces, generated backup filenames, packaging, documentation and authoring scripts to Chanlume. Storage migration is queued in the background only, preserves legacy recovery copies, and never overwrites existing Chanlume data. Frontend reads fall back during migration. Old runtime mutation requests and saved group/Favorites/scan links remain compatible. Backup JSON schema remains 15.
+
+Local package: `outputs/Chanlume-1.19.3.zip`; SHA-256 `6433d361fdf43637a47f665c3337b2f99d7dfb898e99465ba3b9ec7bb88e8cbb`. Source, unpacked mirror and ZIP are verified byte-for-byte by `scripts/package.py`.
+
+Verification: 69 unit/manifest/background tests, all extension JavaScript syntax checks and six browser harnesses. Store assets were recaptured from the renamed interface using synthetic local demo data. Signed-in installed-extension update remains unverified. The developer reported manually uploading the store package on 2026-10-08; review/submission/publication status has not been independently verified. GitHub publication and the TANANIS/Chanlume repository rename are part of this change.
+
+Historical release ZIPs, screenshots, videos and old verification records below retain their original names and contents. Current README uses regenerated Chanlume assets. Current GitHub links point to TANANIS/Chanlume. The simplified English and Traditional Chinese store descriptions from the conversation are saved in STORE_LISTING.md.
 
 ## 1.19.2 direct classification
 

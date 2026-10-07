@@ -33,22 +33,22 @@
       globalThis.__setStoredState = (next) => {
         const oldValue = structuredClone(storedState);
         storedState = structuredClone(next);
-        listeners.forEach((listener) => listener({ tubeShelfState: { oldValue, newValue: structuredClone(storedState) } }, "local"));
+        listeners.forEach((listener) => listener({ chanlumeState: { oldValue, newValue: structuredClone(storedState) } }, "local"));
       };
       globalThis.chrome = {
         storage: {
           local: {
-            get: async () => ({ tubeShelfState: storedState }),
+            get: async () => ({ chanlumeState: storedState }),
             set: async () => {}
           },
           onChanged: { addListener: (listener) => listeners.push(listener) }
         },
         runtime: {
           sendMessage: async (message) => {
-            if (message.type !== "TUBESHELF_MUTATE") return { ok: true };
-            storedState = TubeShelfCore.applyStateOperation(storedState, message.operation);
+            if (message.type !== "CHANLUME_MUTATE") return { ok: true };
+            storedState = ChanlumeCore.applyStateOperation(storedState, message.operation);
             storedState.revision += 1;
-            return { ok: true, state: TubeShelfCore.normalizeState(storedState) };
+            return { ok: true, state: ChanlumeCore.normalizeState(storedState) };
           },
           onMessage: { addListener: () => {} }
         }
