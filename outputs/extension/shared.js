@@ -30,6 +30,10 @@
     "在 YouTube 開啟": "Open on YouTube", "詳細資料": "Details",
     "最關注頻道": "Favorites", "挑選你最想關注的頻道，集中查看最新影片。": "Choose the channels you care about and catch up on their latest videos.",
     "新增頻道": "Add channels", "管理關注頻道": "Manage favorites", "更新影片": "Refresh videos", "最新影片": "Latest videos",
+    "搜尋群組": "Find group", "向左捲動群組": "Scroll groups left", "向右捲動群組": "Scroll groups right",
+    "連線失敗或逾時，請稍後重試。": "Connection failed or timed out. Please retry shortly.",
+    "YouTube 暫時拒絕讀取，請稍後重試。": "YouTube temporarily refused the request. Please retry shortly.",
+    "無法辨識頻道影片資料，請重試或更新 Chanlume。": "Channel video data could not be recognized. Retry or update Chanlume.",
     "已關注": "Following", "取消關注": "Unfollow", "關注頻道": "Follow", "＋ 關注": "+ Follow", "依群組篩選": "Filter by group",
     "搜尋或選擇群組，按一下即可加入或取消關注。": "Search or choose a group, then click to follow or unfollow.",
     "科普知識": "Science", "故事": "Stories", "露營與生存": "Camping and survival", "遊戲開發": "Game development",
@@ -808,7 +812,14 @@
   }
 
   function parseYouTubeInitialData(source) {
-    const marker = /(?:var\s+ytInitialData|window\["ytInitialData"\]|ytInitialData)\s*=\s*\{/g;
+    source = String(source || "");
+    // YouTube now serves inert JSON instead of an inline assignment. Parse data,
+    // never execute page scripts (this also works in an MV3 service worker).
+    for (const script of source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+      if (!/\bid\s*=\s*(["'])yt-initial-data\1/i.test(script[1])) continue;
+      try { const data = JSON.parse(script[2]); if (data && typeof data === "object" && !Array.isArray(data)) return data; } catch (_) {}
+    }
+    const marker = /(?:var\s+ytInitialData|window\[["']ytInitialData["']\]|ytInitialData)\s*=\s*\{/g;
     for (const match of String(source).matchAll(marker)) {
       const start = match.index + match[0].length - 1;
       let depth = 0, quoted = false, escaped = false;

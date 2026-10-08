@@ -8,7 +8,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, "manifest.j
 
 test("manifest is MV3 and requests only the intended permissions", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "1.19.3");
+  assert.equal(manifest.version, "1.19.4");
   assert.deepEqual(manifest.permissions.sort(), ["storage"]);
   assert.deepEqual(manifest.host_permissions.sort(), ["https://www.googleapis.com/youtube/v3/*", "https://www.youtube.com/*"]);
 });

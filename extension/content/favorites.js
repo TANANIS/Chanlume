@@ -39,7 +39,7 @@
         const channel = state.channels[id];
         const data = cache.get(id);
         const videos = (data?.videos || []).slice(0, 6).map((video) => `<a class="cl-favorite-video" href="https://www.youtube.com/watch?v=${escape(video.id)}"><img src="https://i.ytimg.com/vi/${escape(video.id)}/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer"><strong>${escape(video.title)}</strong><time datetime="${escape(video.published)}">${escape(video.published ? new Date(video.published).toLocaleDateString(state.settings.language) : video.publishedLabel || "")}</time></a>`).join("");
-        const status = data?.error ? `<p role="status">${escape(t("影片讀取失敗，請重試。"))} <button class="cl-button" data-favorite-retry="${escape(id)}">${escape(t("重試"))}</button></p>` : "";
+        const status = data?.error ? `<p role="status">${escape(t("影片讀取失敗，請重試。"))} ${escape(t(data.errorMessage || ""))} <button class="cl-button" data-favorite-retry="${escape(id)}">${escape(t("重試"))}</button></p>` : "";
         return `<section class="cl-favorite-channel"><header><div><a href="${escape(channel.url)}">${escape(channel.name)}</a><small>${escape(t(data?.fetchedAt ? "上次更新" : "尚未更新"))}${data?.fetchedAt ? ` · ${escape(new Date(data.fetchedAt).toLocaleString(state.settings.language))}` : ""}</small></div><button class="cl-button" data-favorite-remove="${escape(id)}" aria-label="${escape(t("移除關注") + " " + channel.name)}">${escape(t("移除關注"))}</button></header>${status}${pending.has(id) || !attempted.has(id) ? `<p role="status">${escape(t("讀取最新影片中…"))}</p>` : ""}<div class="cl-favorite-videos">${videos}</div>${data && !data.error && !pending.has(id) && !videos ? `<p>${escape(t("目前沒有公開影片"))}</p>` : ""}</section>`;
       }).join("");
       root.querySelector('[data-favorite-action="refresh"]').disabled = pending.size > 0;
@@ -63,13 +63,14 @@
       renderVideos();
       try {
         const response = await chrome.runtime.sendMessage({ type: "CHANLUME_FAVORITE_FEED", channelId: id, force });
-        if (!response?.ok) throw new Error("Feed unavailable");
+        if (!response?.ok) throw Object.assign(new Error(response?.error || "Feed unavailable"), { code: response?.code });
         if (generation !== epoch) return;
         if (Boolean(response.hideShorts) !== getState().settings.hideShorts) { attempted.delete(id); return; }
         const videos = response.hideShorts ? (response.videos || []).filter((video) => video.format === "video" && /^[\w-]{11}$/.test(video.id)) : parseFeed(response.xml);
         cache.set(id, { videos, hideShorts: Boolean(response.hideShorts), fetchedAt: response.fetchedAt });
-      } catch (_) {
-        if (generation === epoch) cache.set(id, { ...cache.get(id), error: true });
+      } catch (error) {
+        const errorMessage = error.code === "NETWORK" ? "連線失敗或逾時，請稍後重試。" : error.code === "HTTP" ? "YouTube 暫時拒絕讀取，請稍後重試。" : error.code === "PARSE" ? "無法辨識頻道影片資料，請重試或更新 Chanlume。" : "";
+        if (generation === epoch) cache.set(id, { ...cache.get(id), error: true, errorMessage });
       } finally {
         pending.delete(id);
         if (root) { renderVideos(); pump(false); }

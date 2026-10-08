@@ -121,8 +121,8 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     assert.equal(await guide.locator(".cl-guide-list").isVisible(), false);
     const toolbarGroups = content.locator("#chanlume-toolbar .cl-toolbar-groups");
     assert.equal(await content.locator("#chanlume-toolbar .cl-toolbar-brand").count(), 0);
-    assert.equal(await toolbarGroups.evaluate((node) => getComputedStyle(node).flexWrap), "wrap");
-    assert.equal(await toolbarGroups.locator(".cl-toolbar-chip").evaluateAll((chips) => chips.at(-1).offsetTop > chips[0].offsetTop), true);
+    assert.equal(await toolbarGroups.evaluate((node) => getComputedStyle(node).flexWrap), "nowrap");
+    assert.equal(await toolbarGroups.locator(".cl-toolbar-chip").evaluateAll((chips) => chips.at(-1).offsetTop === chips[0].offsetTop), true);
     assert.equal(await content.locator("#chanlume-toolbar").evaluate((node) => getComputedStyle(node).boxSizing), "border-box");
     assert.equal(await content.locator("#chanlume-toolbar").evaluate((node) => getComputedStyle(node).minHeight), "52px");
     const lightTheme = await content.evaluate(() => ({
@@ -166,7 +166,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     const scannedIdentity = await content.evaluate(() => globalThis.__capturedIdentities[0]);
     assert.equal(scannedIdentity.channelId, "UCNqVXfC231oVcZEcUKrW0DQ");
     assert.equal(scannedIdentity.alias, "/@TenaciousTrilobite");
-    console.log("UI smoke checks passed: English UI, group merge, channel header and preview-card classification metadata, unsubscribed control removal, guide collapse, brand-free wrapped toolbar groups, html[dark] YouTube theme following, scan identity extraction, unfiled filtering, synchronized group URL, and dynamic Shorts hiding.");
+    console.log("UI smoke checks passed: English UI, group merge, channel header and preview-card classification metadata, unsubscribed control removal, guide collapse, searchable single-row toolbar groups, html[dark] YouTube theme following, scan identity extraction, unfiled filtering, synchronized group URL, and dynamic Shorts hiding.");
   } finally {
     await browser.close();
   }

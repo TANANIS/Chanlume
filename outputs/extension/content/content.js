@@ -20,6 +20,8 @@
   let pendingStructureRefresh = false;
   let trackedSubscription = { channelId: "", subscribed: null };
   let subscriptionSyncTimer = null;
+  let subscriptionSyncRunning = false;
+  let subscriptionSyncFailures = 0;
   let guideCollapsed = true;
   const scanIdentityByAlias = new Map();
   const IDENTITY_BRIDGE_SOURCE = "chanlume-identity-bridge";
@@ -40,8 +42,11 @@
   function pauseIntegration() {
     favorites.clear();
     observer.disconnect();
+    subscriptionObserver.disconnect();
     clearTimeout(scanTimer);
     clearTimeout(subscriptionSyncTimer);
+    subscriptionSyncTimer = null;
+    subscriptionSyncFailures = 0;
     clearTimeout(startupScanTimer);
     clearTimeout(toast.timer);
     scanTimer = null;
@@ -209,7 +214,7 @@
   }
 
   function currentChannelFromPage() {
-    const watchOwner = document.querySelector('ytd-watch-metadata #owner a[href^="/@"], ytd-watch-metadata #owner a[href^="/channel/"], #upload-info a[href^="/@"], #upload-info a[href^="/channel/"]');
+    const watchOwner = location.pathname === "/watch" ? [...document.querySelectorAll('ytd-watch-metadata #owner a[href^="/@"], ytd-watch-metadata #owner a[href^="/channel/"], #upload-info a[href^="/@"], #upload-info a[href^="/channel/"]')].find(isVisibleControl) : null;
     const pageLink = watchOwner || document.querySelector('yt-page-header-view-model a[href^="/@"], yt-page-header-view-model a[href^="/channel/"], yt-page-header-renderer a[href^="/@"], ytd-c4-tabbed-header-renderer a[href^="/@"], link[rel="canonical"]');
     const locationId = Core.channelKey(location.href);
     const canonicalUrl = document.querySelector('link[rel="canonical"]')?.href || "";
@@ -233,16 +238,24 @@
 
   function currentSubscriptionStatus() {
     const roots = [...document.querySelectorAll('ytd-watch-metadata ytd-subscribe-button-renderer, ytd-watch-metadata yt-subscribe-button-view-model, yt-page-header-view-model yt-subscribe-button-view-model, yt-page-header-view-model ytd-subscribe-button-renderer, yt-page-header-renderer ytd-subscribe-button-renderer, yt-page-header-renderer yt-subscribe-button-view-model, ytd-c4-tabbed-header-renderer ytd-subscribe-button-renderer')];
-    const root = roots.find((node) => node.getClientRects().length) || null;
+    const root = roots.find(isVisibleControl) || null;
     if (!root) return null;
-    if (root.hasAttribute("subscribed")) return true;
-    const button = root.querySelector("button");
+    // Smartimation keeps both states mounted; the first button can be hidden.
+    const button = [...root.querySelectorAll("button")].find(isVisibleControl);
     const aria = button?.getAttribute("aria-label") || "";
     const text = button?.textContent?.trim() || "";
     if (/unsubscribe|取消訂閱|取消订阅/i.test(`${aria} ${text}`)) return true;
     if (/^(subscribed|已訂閱|已订阅)$/i.test(text)) return true;
     if (/^(subscribe|訂閱|订阅)$/i.test(text) || /subscribe to|訂閱「|订阅“/i.test(aria)) return false;
+    if (root.hasAttribute("subscribed") && root.getAttribute("subscribed") !== "false") return true;
     return null;
+  }
+
+  function isVisibleControl(node) {
+    if (!node?.getClientRects().length || node.closest('[hidden], [aria-hidden="true"]')) return false;
+    if (node.checkVisibility && !node.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true })) return false;
+    const style = getComputedStyle(node);
+    return style.visibility === "visible" && style.display !== "none" && style.opacity !== "0";
   }
 
   function currentControlHost() {
@@ -257,7 +270,7 @@
       '#page-header #subscribe-button'
     ];
     const subscribe = selectors.flatMap((selector) => [...document.querySelectorAll(selector)])
-      .find((node) => node.getClientRects().length && !node.closest("#chanlume-channel-control"));
+      .find((node) => isVisibleControl(node) && !node.closest("#chanlume-channel-control"));
     return subscribe?.closest(".ytFlexibleActionsViewModelAction") || subscribe || null;
   }
 
@@ -299,6 +312,7 @@
 
   function renderCurrentChannelControl() {
     if (!state.settings.enabled) return;
+    updateSubscriptionObservation();
     if (location.pathname !== "/watch" && !Core.channelKey(location.href)) {
       document.getElementById("chanlume-channel-control")?.remove();
       document.getElementById("chanlume-channel-classification")?.remove();
@@ -339,6 +353,24 @@
     star.textContent = `${favorite ? "★" : "☆"} ${Core.translateUiText(favorite ? "已關注" : "關注頻道", currentLanguage())}`;
     control.append(star);
     localizeExtensionUi(control);
+    const menu = control.querySelector('.cl-current-menu');
+    menu.setAttribute('popover', 'manual');
+    if (wasOpen) setCurrentMenuOpen(control, true);
+  }
+
+  function setCurrentMenuOpen(control, open) {
+    if (!control) return;
+    const menu = control.querySelector('.cl-current-menu');
+    control.classList.toggle('cl-current-open', open);
+    control.querySelector('.cl-current-trigger')?.setAttribute('aria-expanded', String(open));
+    if (!menu) return;
+    if (open) {
+      menu.showPopover();
+      const rect = control.getBoundingClientRect();
+      const width = menu.getBoundingClientRect().width;
+      menu.style.left = `${Math.max(8, Math.min(rect.right - width, innerWidth - width - 8))}px`;
+      menu.style.top = `${Math.max(8, Math.min(rect.bottom + 8, innerHeight - menu.getBoundingClientRect().height - 8))}px`;
+    } else if (menu.matches(':popover-open')) menu.hidePopover();
   }
 
   async function onCurrentChannelClick(event) {
@@ -356,8 +388,7 @@
     const trigger = event.target.closest(".cl-current-trigger");
     if (trigger) {
       const control = event.currentTarget;
-      control.classList.toggle("cl-current-open");
-      trigger.setAttribute("aria-expanded", String(control.classList.contains("cl-current-open")));
+      setCurrentMenuOpen(control, !control.classList.contains("cl-current-open"));
       return;
     }
     if (event.target.closest("[data-cl-current-manage]")) {
@@ -369,8 +400,11 @@
     const channel = currentChannelFromPage();
     if (!channel || currentSubscriptionStatus() === false) { input.checked = false; toast("請先訂閱這個頻道，再加入群組"); return; }
     const group = state.groups.find((item) => item.id === input.dataset.clCurrentGroup);
-    await commit({ type: "toggle-membership", payload: { channel, channelId: channel.id, aliasIds: channel.aliasIds, groupId: input.dataset.clCurrentGroup, enabled: input.checked } });
-    toast(input.checked ? `已加入「${group?.name || "群組"}」` : `已移出「${group?.name || "群組"}」`);
+    const enabled = input.checked;
+    try {
+      await commit({ type: "toggle-membership", payload: { channel, channelId: channel.id, aliasIds: channel.aliasIds, groupId: input.dataset.clCurrentGroup, enabled } });
+      toast(enabled ? `已加入「${group?.name || "群組"}」` : `已移出「${group?.name || "群組"}」`);
+    } catch (_) { input.checked = !enabled; toast("儲存失敗，請重試。"); }
   }
 
   async function syncSubscriptionState() {
@@ -384,30 +418,39 @@
       if (!state.settings.enabled) return;
     }
     if (trackedSubscription.channelId !== channel.id) {
+      if (subscribed && !currentChannelRecordId(channel)) await commit({ type: "set-subscription", payload: { subscribed: true, channel, aliasIds: channel.aliasIds } });
       trackedSubscription = { channelId: channel.id, subscribed };
-      if (subscribed && !state.channels[channel.id]) await commit({ type: "set-subscription", payload: { subscribed: true, channel, aliasIds: channel.aliasIds } });
       renderCurrentChannelControl();
       return;
     }
-    if (trackedSubscription.subscribed === subscribed) return;
+    if (trackedSubscription.subscribed === subscribed && (!subscribed || currentChannelRecordId(channel))) return;
     const previous = trackedSubscription.subscribed;
-    trackedSubscription.subscribed = subscribed;
-    if (previous === false && subscribed === true) {
-      if (!state.channels[channel.id]) {
+    if (subscribed === true) {
+      if (!currentChannelRecordId(channel)) {
         await commit({ type: "set-subscription", payload: { subscribed: true, channel, aliasIds: channel.aliasIds } });
       }
       toast("已加入未分類，稍後可以選擇群組");
-    } else if (previous === true && subscribed === false && state.channels[channel.id]) {
-      await commit({ type: "set-subscription", payload: { subscribed: false, channelId: channel.id, aliasIds: channel.aliasIds } });
+    } else if (previous === true && subscribed === false && currentChannelRecordId(channel)) {
+      await commit({ type: "set-subscription", payload: { subscribed: false, channelId: currentChannelRecordId(channel), aliasIds: channel.aliasIds } });
       toast("已取消訂閱並從 Chanlume 移除");
     }
+    trackedSubscription = { channelId: channel.id, subscribed };
     renderCurrentChannelControl();
   }
 
   function scheduleSubscriptionSync() {
     if (!state.settings.enabled) return;
-    clearTimeout(subscriptionSyncTimer);
-    subscriptionSyncTimer = setTimeout(() => syncSubscriptionState().catch(() => {}), 700);
+    if (subscriptionSyncTimer !== null) return;
+    subscriptionSyncTimer = setTimeout(async () => {
+      subscriptionSyncTimer = null;
+      if (subscriptionSyncRunning) { scheduleSubscriptionSync(); return; }
+      subscriptionSyncRunning = true;
+      try { await syncSubscriptionState(); subscriptionSyncFailures = 0; }
+      catch (_) {
+        toast("儲存失敗，請重試。");
+        if (++subscriptionSyncFailures < 3) scheduleSubscriptionSync();
+      } finally { subscriptionSyncRunning = false; }
+    }, 700);
   }
 
   function makeShell() {
@@ -469,6 +512,7 @@
   }
 
   function openPanel() {
+    if (document.fullscreenElement) return;
     $("#chanlume-backdrop")?.classList.add("cl-open");
     $("#chanlume-panel")?.classList.add("cl-open");
   }
@@ -476,6 +520,16 @@
   function closePanel() {
     $("#chanlume-backdrop")?.classList.remove("cl-open");
     $("#chanlume-panel")?.classList.remove("cl-open");
+  }
+
+  function syncFullscreen() {
+    const active = Boolean(document.fullscreenElement);
+    document.documentElement.classList.toggle("chanlume-fullscreen", active);
+    if (active) {
+      closePanel();
+      document.querySelector('#chanlume-toolbar dialog[open]')?.close();
+      setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false);
+    }
   }
 
   function toast(message) {
@@ -537,7 +591,9 @@
       if (className === "cl-guide-item") {
         return `<button class="cl-guide-item ${isSubscriptionsPage() && !favorites.active() && group.id === activeGroupId ? "cl-active" : ""}" data-cl-group="${escapeHtml(group.id)}" type="button"><span class="cl-guide-dot" style="color:${group.color};background:${group.color}20">${Core.iconSvg(group.icon, "currentColor", 15)}</span><span class="cl-guide-name">${escapeHtml(group.id === "all" ? "全部訂閱" : group.name)}</span><span class="cl-guide-count">${group.channelIds.length}</span></button>`;
       }
-      return `<button class="cl-toolbar-chip ${isSubscriptionsPage() && !favorites.active() && group.id === activeGroupId ? "cl-active" : ""}" data-cl-group="${escapeHtml(group.id)}" type="button">${escapeHtml(group.name)} <small>${group.channelIds.length}</small></button>`;
+      const selected = isSubscriptionsPage() && !favorites.active() && group.id === activeGroupId;
+      const name = ["all", "unfiled"].includes(group.id) ? Core.translateUiText(group.name, currentLanguage()) : group.name;
+      return `<button class="cl-toolbar-chip ${selected ? "cl-active" : ""}" data-cl-group="${escapeHtml(group.id)}" type="button" aria-pressed="${selected}" title="${escapeHtml(name)} · ${group.channelIds.length} ${Core.translateUiText("個頻道", currentLanguage())}"><span class="cl-chip-dot" style="background:${group.color}"></span><span translate="no">${escapeHtml(name)}</span><small>${group.channelIds.length}</small></button>`;
     }).join("");
   }
 
@@ -585,15 +641,38 @@
     const toolbar = document.getElementById("chanlume-toolbar");
     if (toolbar && toolbar.dataset.signature !== signature) {
       toolbar.dataset.signature = signature;
-      toolbar.innerHTML = `<div class="cl-toolbar-groups">${groupButtons("cl-toolbar-chip")}</div><div class="cl-toolbar-tools"><button class="cl-toolbar-action" data-cl-action="manage" type="button" title="開啟 Chanlume" aria-label="開啟 Chanlume 群組與設定">⚙</button></div>`;
+      const scrollLeft = toolbar.querySelector('.cl-toolbar-groups')?.scrollLeft || 0;
+      toolbar.querySelector('dialog')?.close();
+      toolbar.innerHTML = `<button class="cl-toolbar-action" data-cl-action="scroll-left" type="button" aria-label="向左捲動群組">‹</button><div class="cl-toolbar-groups" role="group" aria-label="訂閱群組">${groupButtons("cl-toolbar-chip")}</div><button class="cl-toolbar-action" data-cl-action="scroll-right" type="button" aria-label="向右捲動群組">›</button><div class="cl-toolbar-tools"><button class="cl-toolbar-search" data-cl-action="find-group" type="button">搜尋群組</button><button class="cl-toolbar-action" data-cl-action="manage" type="button" title="管理群組" aria-label="開啟 Chanlume 群組與設定">${Core.iconSvg("book", "currentColor", 18)}</button></div><dialog class="cl-group-picker" aria-labelledby="cl-group-picker-title"><header><h2 id="cl-group-picker-title">訂閱群組</h2><button class="cl-button" data-cl-action="close-picker" type="button">關閉</button></header><input class="cl-group-search" type="search" placeholder="搜尋群組" aria-label="搜尋群組"><div class="cl-group-picker-list">${groupButtons("cl-toolbar-chip").replaceAll('data-cl-group=', 'data-cl-pick-group=')}</div></dialog>`;
       localizeExtensionUi(toolbar);
+      const strip = toolbar.querySelector('.cl-toolbar-groups');
+      strip.scrollLeft = scrollLeft;
+      const activeChip = strip.querySelector('.cl-active');
+      if (activeChip) {
+        const chipRect = activeChip.getBoundingClientRect(), stripRect = strip.getBoundingClientRect();
+        if (chipRect.left < stripRect.left) strip.scrollLeft += chipRect.left - stripRect.left;
+        else if (chipRect.right > stripRect.right) strip.scrollLeft += chipRect.right - stripRect.right;
+      }
+      toolbar.querySelector('.cl-group-search').addEventListener('input', (event) => {
+        const query = event.target.value.trim().toLocaleLowerCase();
+        toolbar.querySelectorAll('[data-cl-pick-group]').forEach((button) => { button.hidden = !button.textContent.toLocaleLowerCase().includes(query); });
+      });
     }
   }
 
   async function onIntegratedClick(event) {
+    const picked = event.target.closest('[data-cl-pick-group]')?.dataset.clPickGroup;
+    if (picked) { document.querySelector('#chanlume-toolbar dialog')?.close(); openSubscriptionGroup(picked); return; }
     const groupId = event.target.closest("[data-cl-group]")?.dataset.clGroup;
     const action = event.target.closest("[data-cl-action]")?.dataset.clAction;
     const setting = event.target.closest("[data-cl-setting]")?.dataset.clSetting;
+    if (action === "find-group") { document.querySelector('#chanlume-toolbar dialog')?.showModal(); return; }
+    if (action === "close-picker") { document.querySelector('#chanlume-toolbar dialog')?.close(); return; }
+    if (action === "scroll-left" || action === "scroll-right") {
+      const strip = document.querySelector('.cl-toolbar-groups');
+      strip?.scrollBy({ left: strip.clientWidth * (action === "scroll-left" ? -.7 : .7), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? "instant" : "smooth" });
+      return;
+    }
     if (groupId) {
       openSubscriptionGroup(groupId);
       return;
@@ -875,8 +954,9 @@
       if (target?.closest(OWN_UI_SELECTOR)) continue;
       const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
       if (changedNodes.length && changedNodes.every((node) => node instanceof Element && node.matches(OWN_UI_SELECTOR))) continue;
-      if (mutation.type === "attributes" && mutation.attributeName === "style" && (!isSubscriptionsPage() || !state.settings.hideWatched || !target?.matches('#progress, [class*="Progress"], [class*="progress"]'))) continue;
-      if (mutation.target instanceof Element && mutation.target.closest("ytd-subscribe-button-renderer, yt-subscribe-button-view-model")) structure = true;
+      const subscriptionTarget = target?.closest("ytd-subscribe-button-renderer, yt-subscribe-button-view-model");
+      if (mutation.type === "attributes" && ["style", "class", "hidden", "aria-label"].includes(mutation.attributeName) && !subscriptionTarget && (!isSubscriptionsPage() || !state.settings.hideWatched || !target?.matches('#progress, [class*="Progress"], [class*="progress"]'))) continue;
+      if (subscriptionTarget) structure = true;
       if (trackCards && mutation.target instanceof Element) {
         const targetCard = canonicalCard(mutation.target);
         if (targetCard) cards.add(targetCard);
@@ -921,6 +1001,15 @@
     if (work.structure || work.cards.size) scheduleRefresh(32, work);
   });
 
+  const subscriptionObserver = new MutationObserver(() => scheduleRefresh(32, { structure: true }));
+  function updateSubscriptionObservation() {
+    subscriptionObserver.disconnect();
+    if (!state.settings.enabled || document.hidden) return;
+    document.querySelectorAll('ytd-subscribe-button-renderer, yt-subscribe-button-view-model').forEach((root) => {
+      subscriptionObserver.observe(root, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["subscribed", "aria-label", "aria-pressed", "aria-hidden", "hidden", "class", "style"] });
+    });
+  }
+
   function updateObservation() {
     observer.disconnect();
     if (state.settings.enabled && !document.hidden && document.body) {
@@ -928,10 +1017,12 @@
       if (isSubscriptionsPage() && state.settings.hideWatched) attributeFilter.push("style");
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter });
     }
+    updateSubscriptionObservation();
     if (document.hidden) {
       clearTimeout(scanTimer);
       scanTimer = null;
       clearTimeout(subscriptionSyncTimer);
+      subscriptionSyncTimer = null;
       pendingCards.clear();
       pendingFullRefresh = true;
       pendingStructureRefresh = true;
@@ -943,10 +1034,11 @@
     await readState();
     syncActiveGroupFromLocation();
     refreshFromState();
-    await syncSubscriptionState();
+    scheduleSubscriptionSync();
     applyFilters();
     updateObservation();
     document.addEventListener("yt-navigate-finish", () => {
+      subscriptionSyncFailures = 0;
       if (location.pathname !== "/feed/channels") scanIdentityByAlias.clear();
       updateObservation();
       pendingCards.clear();
@@ -966,6 +1058,12 @@
       updateObservation();
       if (!document.hidden) scheduleRefresh(0, { full: true, structure: true });
     });
+    syncFullscreen();
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closePanel(); setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); } });
+    document.addEventListener("click", (event) => { if (!event.target.closest('#chanlume-channel-control')) setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); });
+    window.addEventListener("resize", () => setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false));
+    document.addEventListener("scroll", (event) => { if (!(event.target instanceof Element) || !event.target.closest('.cl-current-menu')) setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); }, true);
     if (state.settings.enabled && location.pathname === "/feed/channels" && location.hash === "#chanlume-update-subscriptions") startupScanTimer = setTimeout(runSubscriptionUpdate, 900);
   }
 

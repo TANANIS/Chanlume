@@ -21,9 +21,16 @@
 
 ## Download & install
 
-**[Download Chanlume 1.19.3](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.19.3.zip)**
+**[Download Chanlume 1.19.4](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.19.4.zip)**
 
 [Chrome Web Store listing](https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole): the published item retains its previous name until this update is submitted, approved and published.
+
+### What's new in 1.19.4
+
+- Groups and Follow controls now recognize YouTube's visible subscription state, including layouts that keep both Subscribe and Subscribed buttons mounted. Temporary save failures retry without losing the action.
+- Favorites reads YouTube's new embedded JSON format as well as older channel pages. Normal uploads load while Shorts hiding is enabled, and request failures show useful retry information.
+- The lower-right Chanlume button stays available across YouTube pages. Video fullscreen hides it and closes open panels; leaving fullscreen restores the button.
+- The subscription toolbar uses a compact, sticky row with group colors, channel counts, horizontal scrolling and group search. Classification menus stay visible above YouTube containers.
 
 ### What's new in 1.19.3
 
@@ -40,11 +47,11 @@
 - Optional starter groups from onboarding and Preferences.
 - A single global power button to pause or resume Chanlume on YouTube; groups and preferences are preserved.
 
-The local automated checks pass: 69 unit/static/background tests plus UI, favorites, classification, onboarding, performance and power-toggle browser harnesses. See [performance findings](PERFORMANCE.md) for the synthetic benchmark and its limits.
+The local automated checks pass: 72 unit/static/background/parser tests plus seven browser harnesses covering UI, favorites, classification, onboarding, performance, power toggles and YouTube regressions. Public Videos pages for all 11 channels in the reported failure case were successfully parsed. See [performance findings](PERFORMANCE.md) for the synthetic benchmark and its limits.
 
 
 
-Package SHA-256: `6433d361fdf43637a47f665c3337b2f99d7dfb898e99465ba3b9ec7bb88e8cbb`.
+Package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec4263894c2030ef8ac98ed1d363`.
 
 ### Chrome
 
@@ -52,7 +59,7 @@ The currently published extension is available from the [Chrome Web Store](https
 
 For manual installation:
 
-1. Download `Chanlume-1.19.3.zip` from the download link above.
+1. Download `Chanlume-1.19.4.zip` from the download link above.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.
@@ -65,6 +72,8 @@ For manual installation:
 Use the same steps from `edge://extensions/`.
 
 Developers can also clone this repository and load the `extension` directory directly.
+
+To update an existing unpacked installation, replace the files in its current folder, select **Reload** on the extension management page, then refresh YouTube tabs. Keeping the same loaded folder preserves the local library; exporting a JSON backup is also available.
 
 ## Why Chanlume?
 
@@ -80,7 +89,8 @@ Instead of replacing YouTube, Chanlume adds a lightweight organization layer dir
 
 - Create custom groups with your own names, colors, and icons.
 - Put the same channel in multiple groups.
-- Switch groups directly from YouTube's sidebar or Subscriptions page; the sidebar group list starts collapsed to save space.
+- Switch groups directly from YouTube's sidebar or the searchable, horizontally scrollable Subscriptions toolbar; the sidebar group list starts collapsed to save space.
+- Open the lower-right Chanlume menu anywhere on YouTube, except during video fullscreen.
 - See each stored channel's group directly beneath its video preview metadata in the Subscriptions feed.
 - Classify a channel beside the Subscribe button on channel and watch pages.
 - Pause or resume Chanlume's YouTube integration with the popup power button; your groups and preferences stay saved.
@@ -209,20 +219,29 @@ The default interface is English unless a Traditional Chinese browser locale is 
 Core checks can be run with Node.js:
 
 ```powershell
-node --test tests/shared.test.js
+node --test tests/shared.test.js tests/manifest.test.js tests/background.test.js tests/youtube-regressions.test.js
 node --check extension/shared.js
 node --check extension/content/content.js
 node --check extension/popup/popup.js
 node --check extension/dashboard/dashboard.js
 ```
 
-The repository also includes UI smoke tests for the dashboard, onboarding flow, popup, group management, localization, and YouTube-integrated controls.
+The repository also includes UI smoke tests for the dashboard, onboarding flow, popup, group management, localization, and YouTube-integrated controls. Set `CHANLUME_NODE_MODULES` to the directory containing Playwright, serve the repository on `http://127.0.0.1:18766`, then run the `tests/*-smoke.cjs` scripts.
+
+If the host blocks loopback HTTP, the offline fixture transport serves the same local files through Playwright routing:
+
+```powershell
+node --require ./tests/local-fixture-preload.cjs tests/ui-smoke.cjs
+node --require ./tests/local-fixture-preload.cjs tests/youtube-regressions-smoke.cjs
+```
+
+Build and verify the unpacked mirror and ZIP with `python scripts/package.py`.
 
 ## Current limitations
 
 YouTube is a continuously changing single-page application. Chanlume depends on public page structure and public metadata, so future YouTube UI changes may occasionally require selector or parser updates.
 
-Subscription discovery may automatically scroll YouTube's subscribed-channels page until the list stabilizes. Classification quality also depends on the public metadata available for each channel; uncertain results intentionally remain unclassified.
+Subscription discovery may automatically scroll YouTube's subscribed-channels page until the list stabilizes. Classification quality also depends on the public metadata available for each channel; channels without usable signals are placed in Other, and any assignment can be corrected manually.
 
 ## Project principles
 

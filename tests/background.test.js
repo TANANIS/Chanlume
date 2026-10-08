@@ -194,3 +194,19 @@ test('extension and browser updates preserve onboarding and data without opening
   assert.equal(background.openedTabs.length, 0);
   assert.deepEqual(background.store.chanlumeState, { ...initial, revision: initial.revision + 3 });
 });
+
+
+test('favorite feeds accept inert JSON and preserve diagnostic categories', async () => {
+  const data = {contents:{twoColumnBrowseResultsRenderer:{tabs:[{tabRenderer:{selected:true,tabIdentifier:'videos',content:{videoRenderer:{videoId:'normal00001',title:{simpleText:'Normal'}}}}}]}}};
+  let mode = 'ok';
+  const background = loadBackground({channels:{'/@one':{name:'One'}},favoriteChannelIds:['/@one'],settings:{hideShorts:true}}, async () => {
+    if (mode === 'network') throw new TypeError('Failed to fetch');
+    return {ok:mode !== 'http',status:429,text:async()=>mode === 'parse' ? 'Consent required' : '<script id="yt-initial-data" type="application/json">'+JSON.stringify(data)+'</script>'};
+  });
+  const message = {type:'CHANLUME_FAVORITE_FEED',channelId:'/@one',force:true};
+  assert.equal((await background.send(message)).videos[0].id,'normal00001');
+  for (const [kind, code] of [['network','NETWORK'],['http','HTTP'],['parse','PARSE']]) {
+    mode = kind; const result = await background.send(message);
+    assert.equal(result.ok,false); assert.equal(result.code,code); assert.ok(result.error);
+  }
+});

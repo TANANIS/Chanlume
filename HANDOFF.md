@@ -1,8 +1,20 @@
 # Chanlume Handoff
 
-Updated: 2026-10-08
-Current extension version: **1.19.3 (Chanlume)**
+Updated: 2026-10-09
+Current extension version: **1.19.4 (Chanlume)**
 Current state schema: **15**
+
+## 1.19.4 YouTube controls, Favorites and toolbar
+
+Fixed subscription detection for YouTube Smartimation layouts that retain both button states. Controls use the visible button, observe subscription components directly and only mark synchronization complete after a successful semantic commit. Failed saves retry up to three attempts. Classification uses a fixed-position native popover to avoid container clipping; failed membership saves restore the committed checkbox state.
+
+Favorites now parses inert `script#yt-initial-data` JSON in addition to legacy assignments without executing scripts. With Shorts hidden, the selected Videos tab remains the only source. NETWORK, HTTP and PARSE failures propagate to localized retry guidance. All 11 public channels in the reported failure case returned HTTP 200 and yielded recognized normal uploads.
+
+The launcher stays visible while Chanlume is enabled outside fullscreen. Fullscreen closes the panel, backdrop and classification menu. The toolbar is a sticky single row with group colors, count badges, horizontal scrolling, active-group visibility and searchable group selection; dark/light themes and a 390 px viewport were checked.
+
+Verification: **72/72** unit/static/background/parser tests, all extension JavaScript syntax checks, and seven browser harnesses (`ui`, `favorites`, `classification`, `onboarding`, `performance`, `power`, `youtube-regressions`) passed. Loopback HTTP was blocked in the test environment; `tests/local-fixture-preload.cjs` serves local fixture files through Playwright routing. The user reported completing the installed-extension reload/update check on 2026-10-09; this is user-reported verification, not an independently automated signed-in check.
+
+Package: `outputs/Chanlume-1.19.4.zip`; SHA-256 `446118680dc3279d8e71814eab874d79ba7bec4263894c2030ef8ac98ed1d363`. All 19 source/mirror/ZIP entries match byte-for-byte. GitHub push was authorized on 2026-10-09. No 1.19.4 Chrome Web Store submission was performed.
 
 ## 1.19.3 Chanlume rename
 

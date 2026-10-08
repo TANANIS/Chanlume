@@ -61,6 +61,10 @@ Favorites use `/feed/subscriptions#chanlume-view=favorites` and mount in that pa
 
 When `settings.hideShorts` is true, Favorites instead reads the selected channel Videos tab from public `ytInitialData`. Only recognized normal video cards are accepted; Shorts links/reel endpoints, shelves and playlists are excluded. Missing or unrecognized data produces a retryable error, never an RSS fallback. Cache and in-flight keys include the Shorts mode. A live mode change clears rendered video data and advances the request generation, so stale RSS replies cannot restore Shorts. Same-mode retry failures may retain previously verified normal videos.
 
+Channel page parsing accepts inert `script#yt-initial-data` JSON and legacy `ytInitialData` assignments without executing page code. Favorite feed failures preserve NETWORK, HTTP and PARSE categories for localized retry guidance.
+
+Subscription status reads the visible button in YouTube's retained dual-button layouts. A component-scoped observer tracks subscription animation/state changes; the general page observer keeps its narrow attribute filter. Synchronization marks the tracked state only after the semantic commit succeeds, and retries transient failures up to three attempts. Classification and Favorites continue using the existing mutation operations and alias resolution.
+
 ## Direct classification and starter groups
 
 Classification folds common Traditional/Simplified variants in derived matching text only, removes contact/URL noise, matches English word boundaries, caps correlated phrase scores per field and deduplicates repeated titles and official topic groups. Specific subjects and explicit group-name aliases reuse existing IDs, names and memberships. Personal vocabulary still derives only from stored manual labels; model suggestions do not train themselves.

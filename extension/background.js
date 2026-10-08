@@ -23,7 +23,7 @@ async function readFavoriteFeed(identity, force = false) {
     const timeout = setTimeout(() => controller.abort(), 20000);
     const get = async (url, maxLength) => {
       const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store" });
-      if (!response.ok) throw new Error(`YouTube ${response.status}`);
+      if (!response.ok) throw Object.assign(new Error(`YouTube ${response.status}`), { code: "HTTP" });
       const text = await response.text();
       if (text.length > maxLength) throw new Error("Feed response too large");
       return text;
@@ -41,7 +41,9 @@ async function readFavoriteFeed(identity, force = false) {
       if (!channelId) {
         const source = await get(`${channel.url}/videos`, 10000000);
         // Channel metadata identifies the page owner; unrelated video owners are not identity evidence.
-        channelId = source.match(/"channelMetadataRenderer"\s*:\s*\{[^}]*"externalId"\s*:\s*"(UC[\w-]{22})"/)?.[1]
+        let metadata;
+        try { metadata = Core.parseYouTubeInitialData(source).metadata?.channelMetadataRenderer; } catch (_) {}
+        channelId = /^UC[\w-]{22}$/.test(metadata?.externalId || "") ? metadata.externalId : source.match(/"channelMetadataRenderer"\s*:\s*\{[^}]*"externalId"\s*:\s*"(UC[\w-]{22})"/)?.[1]
           || source.match(/<meta\s+itemprop="channelId"\s+content="(UC[\w-]{22})"/)?.[1] || "";
       }
       if (!channelId) throw new Error("Could not identify channel");
@@ -107,7 +109,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "CHANLUME_FAVORITE_FEED") {
     readFavoriteFeed(message.channelId, message.force === true)
       .then((result) => sendResponse({ ok: true, ...result }))
-      .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
+      .catch((error) => sendResponse({ ok: false, error: String(error?.message || error), code: error.code || (["AbortError", "TimeoutError", "TypeError"].includes(error.name) ? "NETWORK" : /YouTube.*(?:data|tab)|identify channel/.test(error.message) ? "PARSE" : "UNAVAILABLE") }));
     return true;
   }
   if (message?.type === "OPEN_DASHBOARD") {

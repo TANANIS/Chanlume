@@ -47,15 +47,15 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   assert.equal(await page.locator('#native-feed').isVisible(),false);
   assert.equal(await page.locator('#chanlume-toolbar').isVisible(),false);
   await page.locator('.cl-favorite-heading [data-favorite-action="manage"]').click();
-  await page.locator('dialog select').selectOption('group:learning');
+  await page.locator('#chanlume-favorites-page dialog select').selectOption('group:learning');
   assert.equal(await page.locator('[data-favorite-toggle]').count(),1);
   await page.locator('[data-favorite-toggle="/@science"]').click();
   await page.waitForFunction(()=>__state().favoriteChannelIds.includes('/@science'));
-  await page.locator('dialog select').selectOption('');
-  await page.locator('dialog input[type=search]').fill('Design');
+  await page.locator('#chanlume-favorites-page dialog select').selectOption('');
+  await page.locator('#chanlume-favorites-page dialog input[type=search]').fill('Design');
   assert.equal(await page.locator('[data-favorite-toggle]').count(),1);
   await page.locator('[data-favorite-toggle="/@design"]').click();
-  await page.locator('dialog input[type=search]').fill('');
+  await page.locator('#chanlume-favorites-page dialog input[type=search]').fill('');
   await page.locator('[data-favorite-toggle="/@empty"]').click();
   await page.locator('[data-favorite-action="close"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('.cl-favorite-video').length===3);
@@ -78,14 +78,14 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await page.evaluate(()=>{__failSave=true;});
   await page.locator('[data-favorite-toggle="/@music"]').click();
   await page.waitForFunction(()=>document.querySelector('.cl-favorite-picker-error').textContent.length>0);
-  assert.equal(await page.locator('dialog').isVisible(),true);
+  assert.equal(await page.locator('#chanlume-favorites-page dialog').isVisible(),true);
   assert.equal(await page.locator('[data-favorite-toggle="/@music"]').getAttribute('aria-pressed'),'false');
   assert.equal(await page.evaluate(()=>__state().favoriteChannelIds.includes('/@music')),false);
   await page.evaluate(()=>{__failSave=false;});
   await page.locator('[data-favorite-toggle="/@music"]').click();
   await page.waitForFunction(()=>__state().favoriteChannelIds.includes('/@music'));
   await page.locator('[data-favorite-action="close"]').click();
-  await page.locator('dialog').waitFor({state:'hidden'});
+  await page.locator('#chanlume-favorites-page dialog').waitFor({state:'hidden'});
   await page.locator('[data-favorite-remove="/@music"]').click();
   await page.waitForFunction(()=>!__state().favoriteChannelIds.includes('/@music'));
   // Changing Shorts preference discards an in-flight RSS response and cached Shorts.
