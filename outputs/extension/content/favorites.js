@@ -32,16 +32,16 @@
       const state = getState();
       const area = root.querySelector(".cl-favorite-feed");
       if (!state.favoriteChannelIds.length) {
-        area.innerHTML = `<div class="cl-favorite-empty"><span aria-hidden="true">☆</span><h2>${escape(t("尚未加入關注頻道"))}</h2><p>${escape(t("挑選你最想關注的頻道，集中查看最新影片。"))}</p><button class="cl-button cl-primary" data-favorite-action="manage">${escape(t("新增頻道"))}</button></div>`;
+        globalThis.ChanlumeDom.patch(area, `<div class="cl-favorite-empty"><span aria-hidden="true">☆</span><h2>${escape(t("尚未加入關注頻道"))}</h2><p>${escape(t("挑選你最想關注的頻道，集中查看最新影片。"))}</p><button class="cl-button cl-primary" data-favorite-action="manage">${escape(t("新增頻道"))}</button></div>`);
         return;
       }
-      area.innerHTML = state.favoriteChannelIds.map((id) => {
+      globalThis.ChanlumeDom.patch(area, state.favoriteChannelIds.map((id) => {
         const channel = state.channels[id];
         const data = cache.get(id);
         const videos = (data?.videos || []).slice(0, 6).map((video) => `<a class="cl-favorite-video" href="https://www.youtube.com/watch?v=${escape(video.id)}"><img src="https://i.ytimg.com/vi/${escape(video.id)}/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer"><strong>${escape(video.title)}</strong><time datetime="${escape(video.published)}">${escape(video.published ? new Date(video.published).toLocaleDateString(state.settings.language) : video.publishedLabel || "")}</time></a>`).join("");
         const status = data?.error ? `<p role="status">${escape(t("影片讀取失敗，請重試。"))} ${escape(t(data.errorMessage || ""))} <button class="cl-button" data-favorite-retry="${escape(id)}">${escape(t("重試"))}</button></p>` : "";
-        return `<section class="cl-favorite-channel"><header><div><a href="${escape(channel.url)}">${escape(channel.name)}</a><small>${escape(t(data?.fetchedAt ? "上次更新" : "尚未更新"))}${data?.fetchedAt ? ` · ${escape(new Date(data.fetchedAt).toLocaleString(state.settings.language))}` : ""}</small></div><button class="cl-button" data-favorite-remove="${escape(id)}" aria-label="${escape(t("移除關注") + " " + channel.name)}">${escape(t("移除關注"))}</button></header>${status}${pending.has(id) || !attempted.has(id) ? `<p role="status">${escape(t("讀取最新影片中…"))}</p>` : ""}<div class="cl-favorite-videos">${videos}</div>${data && !data.error && !pending.has(id) && !videos ? `<p>${escape(t("目前沒有公開影片"))}</p>` : ""}</section>`;
-      }).join("");
+        return `<section class="cl-favorite-channel" data-favorite-channel="${escape(id)}"><header><div><a href="${escape(channel.url)}">${escape(channel.name)}</a><small>${escape(t(data?.fetchedAt ? "上次更新" : "尚未更新"))}${data?.fetchedAt ? ` · ${escape(new Date(data.fetchedAt).toLocaleString(state.settings.language))}` : ""}</small></div><button class="cl-button" data-favorite-remove="${escape(id)}" aria-label="${escape(t("移除關注") + " " + channel.name)}">${escape(t("移除關注"))}</button></header>${status}${pending.has(id) || !attempted.has(id) ? `<p role="status">${escape(t("讀取最新影片中…"))}</p>` : ""}<div class="cl-favorite-videos" data-dom-key="videos-${escape(id)}">${videos}</div>${data && !data.error && !pending.has(id) && !videos ? `<p>${escape(t("目前沒有公開影片"))}</p>` : ""}</section>`;
+      }).join(""));
       root.querySelector('[data-favorite-action="refresh"]').disabled = pending.size > 0;
     }
 
@@ -99,15 +99,15 @@
       const filter = dialog.querySelector("select");
       filter.setAttribute("aria-label", t("依群組篩選"));
       const selected = filter.value;
-      filter.innerHTML = `<option value="">${escape(t("全部頻道"))}</option><option value="favorites">${escape(t("已關注"))}</option>${state.groups.map((group) => `<option value="group:${escape(group.id)}">${escape(group.name)}</option>`).join("")}`;
+      globalThis.ChanlumeDom.patch(filter, `<option value="">${escape(t("全部頻道"))}</option><option value="favorites">${escape(t("已關注"))}</option>${state.groups.map((group) => `<option value="group:${escape(group.id)}">${escape(group.name)}</option>`).join("")}`);
       filter.value = selected;
       const group = state.groups.find((group) => `group:${group.id}` === filter.value);
       const channels = Object.values(state.channels).filter((channel) => (!query || `${channel.name} ${channel.id}`.toLowerCase().includes(query)) && (!group || group.channelIds.includes(channel.id)) && (filter.value !== "favorites" || state.favoriteChannelIds.includes(channel.id))).sort((a, b) => a.name.localeCompare(b.name, state.settings.language));
-      list.innerHTML = channels.length ? channels.map((channel) => {
+      globalThis.ChanlumeDom.patch(list, channels.length ? channels.map((channel) => {
         const selected = state.favoriteChannelIds.includes(channel.id);
         const avatar = channel.avatar ? `<img src="${escape(channel.avatar)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : escape(channel.name.slice(0, 1));
-        return `<div class="cl-favorite-picker-row"><span class="cl-favorite-avatar">${avatar}</span><span class="cl-favorite-picker-copy"><strong>${escape(channel.name)}</strong><small>${escape(channel.id)}</small></span><button class="cl-button" data-favorite-toggle="${escape(channel.id)}" aria-pressed="${selected}" aria-label="${escape(t(selected ? "取消關注" : "關注頻道") + " " + channel.name)}" ${saving.has(channel.id) ? "disabled" : ""}>${escape(t(selected ? "已關注" : "＋ 關注"))}</button></div>`;
-      }).join("") : `<p>${escape(t(Object.keys(state.channels).length ? "找不到符合的頻道" : "先更新訂閱內容，再回來挑選頻道。"))}</p>`;
+        return `<div class="cl-favorite-picker-row" data-dom-key="picker-${escape(channel.id)}"><span class="cl-favorite-avatar">${avatar}</span><span class="cl-favorite-picker-copy"><strong>${escape(channel.name)}</strong><small>${escape(channel.id)}</small></span><button class="cl-button" data-favorite-toggle="${escape(channel.id)}" aria-pressed="${selected}" aria-label="${escape(t(selected ? "取消關注" : "關注頻道") + " " + channel.name)}" ${saving.has(channel.id) ? "disabled" : ""}>${escape(t(selected ? "已關注" : "＋ 關注"))}</button></div>`;
+      }).join("") : `<p>${escape(t(Object.keys(state.channels).length ? "找不到符合的頻道" : "先更新訂閱內容，再回來挑選頻道。"))}</p>`);
       list.scrollTop = scroll;
       if (focused) [...list.querySelectorAll("[data-favorite-toggle]")].find((button) => button.dataset.favoriteToggle === focused)?.focus({ preventScroll: true });
     }

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" dark><head><meta charset="utf-8"><base href="/">
+<link rel="stylesheet" href="/extension/content/content.css"><link rel="stylesheet" href="/extension/content/subscriptions.css">
+<style>
+body { margin:0; font:14px Arial,sans-serif; background:#0f0f0f; color:#f1f1f1; }
+html:not([dark]) body { background:#fff; color:#0f0f0f; }
+.demo-top { height:64px; display:flex; align-items:center; gap:32px; padding:0 28px; border-bottom:1px solid #8883; }
+.demo-top strong { font-size:20px; }.demo-top input { width:40%; border:1px solid #8884; border-radius:30px; padding:10px 20px; background:transparent; color:inherit; }
+ytd-guide-renderer { display:block; position:fixed; width:240px; left:0; top:80px; } ytd-guide-renderer #native-nav { padding:10px 24px; line-height:3; color:#aaa; }
+ytd-page-manager { display:block; overflow-x:auto; overflow-y:hidden; }
+ytd-browse { display:block; overflow:hidden; margin:0 32px 0 260px; } #primary { min-width:0; }
+#native-feed { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px 20px; padding:0 24px 32px; }
+ytd-rich-item-renderer { display:block; min-width:0; } ytd-rich-item-renderer img { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:12px; }
+ytd-rich-item-renderer a { text-decoration:none; color:inherit; } h3 { margin:12px 0 6px; font-size:16px; } yt-content-metadata-view-model { display:block; color:#888; font-size:12px; line-height:1.7; }
+html.chanlume-shelf-list #native-feed { grid-template-columns:1fr; } html.chanlume-shelf-list yt-lockup-view-model { display:grid; grid-template-columns:minmax(120px,30%) 1fr; gap:20px; }
+@media(max-width:800px){ytd-guide-renderer{display:none} ytd-browse{margin:0 8px} #native-feed{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 12px}}
+@media(max-width:460px){#native-feed{grid-template-columns:1fr}.demo-top{gap:12px;padding:0 20px}.demo-top input{width:50%}}
+</style>
+<script src="/extension/shared.js"></script><script>
+const names = ['Studio North','Frame by Frame','Small Experiments','Code Garden','Analog Hours','Quiet Workshop','The Field Notes','Pixel Stories','Everyday Objects','Late Night Builds','Open Horizon','Sound Archive'];
+const groups = [{id:'design',name:'Design & craft',icon:'art',color:'#7c5cff',channelIds:['/@demo0','/@demo1','/@demo2','/@demo4','/@demo5']},{id:'code',name:'Code & technology',icon:'technology',color:'#4a91ff',channelIds:['/@demo3','/@demo7','/@demo9']},{id:'slow',name:'A slower afternoon',icon:'music',color:'#2dbd9b',channelIds:['/@demo6','/@demo8','/@demo10','/@demo11']}];
+let state = ChanlumeCore.normalizeState(JSON.parse(localStorage.getItem('shelf-fixture') || 'null') || {revision:1,channels:Object.fromEntries(names.map((name,i)=>['/@demo'+i,{name,url:'https://www.youtube.com/@demo'+i}])),groups,settings:{enabled:true,language:'en',hideShorts:true,onboardingComplete:true}});
+history.replaceState({},'', '/feed/subscriptions'+(location.hash||'#chanlume-group=all'));
+let listener;
+window.__runtimeListeners=[];
+window.__sendRuntimeMessage=message=>new Promise(resolve=>__runtimeListeners[0](message,null,resolve));
+window.__operations=[]; window.__failSave=false; window.__state=()=>state;
+window.__change=next=>{const old=state;state=ChanlumeCore.normalizeState(next);localStorage.setItem('shelf-fixture',JSON.stringify(state));listener?.({chanlumeState:{oldValue:old,newValue:state}},'local')};
+window.chrome={storage:{local:{get:async()=>({chanlumeState:state})},onChanged:{addListener:fn=>listener=fn}},runtime:{onMessage:{addListener(fn){__runtimeListeners.push(fn)}},sendMessage:async message=>{if(message.type==='CHANLUME_CHANNEL_FEED'){
+window.__recentCalls=(window.__recentCalls||[]);__recentCalls.push(message);
+await new Promise(resolve=>setTimeout(resolve,window.__recentDelay||15));
+if(window.__failRecent?.includes(message.channelId))return{ok:false,code:'NETWORK'};
+const cards=[...document.querySelectorAll('#native-feed ytd-rich-item-renderer')].filter(card=>card.querySelector('#channel-name')?.getAttribute('href')===message.channelId);
+return{ok:true,hideShorts:state.settings.hideShorts,fetchedAt:Date.now(),videos:cards.map(card=>{const a=card.querySelector('#video-title, h3 a'),raw=card.querySelector('time')?.getAttribute('datetime');const id=new URL(a.href).searchParams.get('v');return{id,title:a.textContent,published:raw?raw+'T12:00:00Z':'',publishedLabel:'recently',format:'video'};}).filter(v=>/^[\w-]{11}$/.test(v.id||''))};
+}if(message.type==='CHANLUME_MUTATE'){__operations.push(message.operation);if(__failSave)return{ok:false,error:'Fixture save failure'};const next=ChanlumeCore.applyStateOperation(state,message.operation);next.revision=state.revision+1;__change(next);return{ok:true,state}}return{ok:true}}}};
+</script></head><body>
+<div class="demo-top"><strong>▶ YouTube</strong><input aria-label="YouTube search" placeholder="Search YouTube"><span>◉</span></div>
+<ytd-guide-renderer><div id="sections"><nav id="native-nav"><a href="/">Home</a><br><a href="/feed/subscriptions">Subscriptions</a><br><a href="/feed/hype">Hype</a></nav></div><div id="footer">Native footer</div></ytd-guide-renderer>
+<ytd-page-manager><ytd-browse page-subtype="subscriptions"><div id="primary"><main id="native-feed"></main></div></ytd-browse></ytd-page-manager>
+<script>
+const titles=['Designing a quieter digital space','The beauty of everyday details','Making room for a new idea','Building something small, from scratch','Objects with a story to tell','Inside a creative workspace','A walk without a destination','One pixel at a time','Things we keep, things we make','A weekend project that actually works','An afternoon outside','Music for the work in between'];
+window.__addVideo=(index,title)=>{const card=document.createElement('ytd-rich-item-renderer');card.innerHTML=`<yt-lockup-view-model><a id="thumbnail" href="/watch?v=demo${String(index).padStart(7,'0')}"><img alt="" src="https://i.ytimg.com/vi/demo${String(index).padStart(7,'0')}/mqdefault.jpg"></a><yt-lockup-metadata-view-model><h3><a id="video-title" href="/watch?v=demo${String(index).padStart(7,'0')}">${title}</a></h3><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a id="channel-name" href="/@demo${index%12}">${names[index%12]}</a></div><div class="ytContentMetadataViewModelMetadataRow">${12+index*7}K views · ${index+1} days ago</div></yt-content-metadata-view-model></yt-lockup-metadata-view-model></yt-lockup-view-model>`;document.querySelector('#native-feed').append(card);return card};
+titles.forEach((title,i)=>__addVideo(i,title));
+</script>
+<script src="/extension/content/dom.js"></script><script src="/extension/content/favorites.js"></script><script src="/extension/content/recent.js"></script><script src="/extension/content/subscriptions.js"></script><script src="/extension/content/navigation.js"></script><script src="/extension/content/content.js"></script>
+</body></html>

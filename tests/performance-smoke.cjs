@@ -1,3 +1,4 @@
+const {selectScope}=require('./navigation-actions.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -12,7 +13,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     await page.route('**/extension/content/content.js', route => {
       const source = fs.readFileSync(path.join(__dirname, '../extension/content/content.js'), 'utf8')
         .replace('function applyFilters(cards = null) {', 'function applyFilters(cards = null) { globalThis.__filterRuns = (globalThis.__filterRuns || 0) + 1;')
-        .replace('  init();', '  globalThis.__test = { acceptState, refreshFromState }; init();');
+        .replace('  init().catch', '  globalThis.__test = { acceptState, refreshFromState }; init().catch');
       return route.fulfill({ contentType: 'text/javascript; charset=utf-8', body: source });
     });
     await page.goto('http://127.0.0.1:18766/tests/subscriptions-harness.html');
@@ -42,7 +43,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     assert.equal(await page.evaluate(() => __filterRuns), 1, 'one appended card should cause one filter pass');
 
     // YouTube can reuse a card and only change its channel link.
-    await page.locator('#chanlume-toolbar [data-cl-group="unfiled"]').click();
+    await selectScope(page,'unfiled');
     await page.evaluate(() => document.querySelector('#new-card a[href^="/@"]').setAttribute('href', '/@waiting'));
     await page.waitForFunction(() => !document.querySelector('#new-card').classList.contains('chanlume-hidden') && document.querySelector('#new-card .chanlume-card-classification').textContent.includes('Unclassified'));
 
@@ -71,7 +72,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     }), 0);
 
     await page.evaluate(next => { next.revision = 3; next.settings.hideWatched = true; __test.acceptState(next); __test.refreshFromState(); }, state);
-    await page.locator('#chanlume-toolbar [data-cl-group="all"]').click();
+    await selectScope(page,'all');
     await page.evaluate(() => { const progress = document.createElement('div'); progress.id = 'progress'; progress.style.width = '0%'; document.querySelector('#new-card').append(progress); });
     await page.waitForTimeout(100);
     assert.equal(await page.locator('#new-card').evaluate(card => card.classList.contains('chanlume-hidden')), false);

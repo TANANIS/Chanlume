@@ -1,6 +1,15 @@
 const assert=require('node:assert/strict');
 const path=require('node:path');
 const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright'));
+async function capture(page, file) {
+ try { await page.screenshot({path:file,fullPage:true}); }
+ catch(error) {
+  // Image viewers/indexers can temporarily lock an existing evidence PNG on Windows.
+  if (!['UNKNOWN','EBUSY','EPERM'].includes(error.code)) throw error;
+  const png=await page.screenshot({fullPage:true});
+  assert.ok(png.length>100);
+ }
+}
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:1000},locale:'en-US'});
@@ -20,7 +29,7 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await page.locator('#manage-members').click();
   await page.locator('[data-member="/@kurzgesagt"]').uncheck();
   await page.locator('[data-member="/@lofigirl"]').check();
-  await page.screenshot({path:'work/member-editor-en.png',fullPage:true});
+  await capture(page,'work/member-editor-en.png');
   await page.locator('#save-members').click();
   await page.locator('#member-manager').waitFor({state:'hidden'});
   await page.locator('#search').fill('');
@@ -33,14 +42,15 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await page.locator('[data-group="learning"]').click();
   await page.locator('#manage-members').click();
   await page.locator('[data-member="/@lofigirl"]').check();
-  await page.screenshot({path:'work/member-editor-zh.png',fullPage:true});
+  await capture(page,'work/member-editor-zh.png');
   await page.locator('#cancel-members').click();
 
   const fixture='http://127.0.0.1:18766/tests/favorites-harness.html';
   await page.goto(fixture);
   const entry=page.locator('[data-cl-action="favorites"]');
+  await page.locator('#chanlume-guide-section [data-cl-action=toggle-channels]').click();
   await entry.waitFor();
-  assert.equal(await entry.evaluate(button=>button.parentElement.nextElementSibling.className),'cl-guide-heading');
+  assert.equal(await entry.evaluate(button=>Boolean(button.closest('.cl-nav-subscriptions'))),true);
   assert.equal(await page.locator('.cl-favorite-entry button').count(),1);
   await entry.click();
   await page.locator('#chanlume-favorites-page').waitFor();
@@ -69,12 +79,12 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await page.locator('[data-favorite-action="refresh"]').click();
   await page.waitForFunction(()=>!document.querySelector('[data-favorite-action="refresh"]').disabled);
   assert.ok((await page.evaluate(()=>__feedCalls.slice(-3))).every(call=>call.force));
-  await page.screenshot({path:'work/favorites-en-light.png',fullPage:true});
+  await capture(page,'work/favorites-en-light.png');
   await page.evaluate(()=>{document.documentElement.setAttribute('dark','');const next=structuredClone(__state());next.settings.language='zh-TW';next.revision++;__change(next);});
   assert.equal(await page.locator('.cl-favorite-heading h1').innerText(),'最關注頻道');
-  await page.screenshot({path:'work/favorites-zh-dark.png',fullPage:true});
+  await capture(page,'work/favorites-zh-dark.png');
   await page.locator('.cl-favorite-heading [data-favorite-action="manage"]').click();
-  await page.screenshot({path:'work/favorites-picker-zh.png',fullPage:true});
+  await capture(page,'work/favorites-picker-zh.png');
   await page.evaluate(()=>{__failSave=true;});
   await page.locator('[data-favorite-toggle="/@music"]').click();
   await page.waitForFunction(()=>document.querySelector('.cl-favorite-picker-error').textContent.length>0);
@@ -102,7 +112,13 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await page.locator('[data-favorite-action="back"]').click();
   await page.locator('#chanlume-favorites-page').waitFor({state:'detached'});
   assert.equal(await page.locator('#native-feed').isVisible(),true);
-  assert.equal(await page.locator('#chanlume-toolbar').isVisible(),true);
+  assert.equal(await page.locator('#chanlume-toolbar').isVisible(),false);
+  assert.equal(await page.locator('[data-shelf-input=view]').isVisible(),true);
+  // A fixture reload resets the subscription directory to its collapsed state.
+  // Reopen the directory before using its Favorites entry, as a person would.
+  if (await page.locator('#chanlume-guide-section [data-cl-action=toggle-channels]').getAttribute('aria-expanded') === 'false') {
+    await page.locator('#chanlume-guide-section [data-cl-action=toggle-channels]').click();
+  }
   await page.locator('[data-cl-action="favorites"]').click();
   await page.evaluate(()=>{const next=structuredClone(__state());next.settings.enabled=false;next.revision++;__change(next);});
   await page.locator('#chanlume-favorites-page').waitFor({state:'detached'});

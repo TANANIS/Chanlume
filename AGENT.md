@@ -15,6 +15,9 @@ This file defines the working rules for agents and maintainers changing Chanlume
 - `extension/shared.js`: state schema, normalization, channel identity, grouping, classification, and semantic state operations.
 - `extension/background.js`: the only writer of `chanlumeState`; serializes mutations and broadcasts committed revisions.
 - `extension/content/content.js`: YouTube integration, scanning, filtering, page controls, and DOM behavior.
+- `extension/content/recent.js`: historical per-tab public recent-content reader; retained but not injected or called by the current native-feed-only Subscriptions UI.
+- `extension/content/navigation.js`: sidebar/group toolbar mounting and navigation lifecycle.
+- `extension/content/subscriptions.js` and `subscriptions.css`: subscription views and Collections management; existing semantic operations remain the only persistence path.
 - `extension/content/identity-bridge.js`: MAIN-world, read-only bridge for stable YouTube channel identity evidence.
 - `extension/dashboard/`: full collection and settings UI.
 - `extension/popup/`: compact extension UI.

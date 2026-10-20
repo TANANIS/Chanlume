@@ -1,7 +1,8 @@
 (function () {
   "use strict";
 
-  if (window.top !== window || document.getElementById("chanlume-launcher")) return;
+  if (window.top !== window || globalThis.__chanlumeContentInitialized) return;
+  globalThis.__chanlumeContentInitialized = true;
   const Core = globalThis.ChanlumeCore;
   const previousHash = location.hash;
   const currentHash = Core.canonicalHash(previousHash);
@@ -14,7 +15,7 @@
   let homeRedirecting = false;
   let shortsRedirecting = false;
   const VIDEO_CARD_SELECTOR = "ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-channel-renderer, ytd-compact-video-renderer, yt-lockup-view-model";
-  const STRUCTURE_SELECTOR = 'ytd-guide-renderer, ytd-mini-guide-renderer, ytd-browse[page-subtype="subscriptions"], ytd-watch-flexy, yt-page-header-view-model, yt-page-header-renderer, yt-content-metadata-view-model, .ytContentMetadataViewModelMetadataRow, yt-flexible-actions-view-model, yt-subscribe-button-view-model';
+  const STRUCTURE_SELECTOR = 'ytd-rich-shelf-renderer, ytd-guide-renderer, ytd-mini-guide-renderer, ytd-browse[page-subtype="subscriptions"], ytd-watch-flexy, yt-page-header-view-model, yt-page-header-renderer, yt-content-metadata-view-model, .ytContentMetadataViewModelMetadataRow, yt-flexible-actions-view-model, yt-subscribe-button-view-model';
   const pendingCards = new Set();
   let pendingFullRefresh = false;
   let pendingStructureRefresh = false;
@@ -22,10 +23,9 @@
   let subscriptionSyncTimer = null;
   let subscriptionSyncRunning = false;
   let subscriptionSyncFailures = 0;
-  let guideCollapsed = true;
   const scanIdentityByAlias = new Map();
   const IDENTITY_BRIDGE_SOURCE = "chanlume-identity-bridge";
-  const OWN_UI_SELECTOR = '#chanlume-favorites-page, #chanlume-panel, #chanlume-toolbar, #chanlume-guide-section, #chanlume-launcher, #chanlume-backdrop, #chanlume-scan-progress, #chanlume-channel-control, #chanlume-channel-classification, .chanlume-card-classification';
+  const OWN_UI_SELECTOR = '#chanlume-subscriptions-page, #chanlume-shelf-sticky, #chanlume-favorites-page, #chanlume-toolbar, #chanlume-guide-section, #chanlume-mini-guide, #chanlume-scan-progress, #chanlume-channel-control, #chanlume-channel-classification, .chanlume-card-classification';
   let membershipsByChannel = new Map();
   let unfiledIds = [];
   let stateLoaded = false;
@@ -33,7 +33,7 @@
   let autoplayRestore = null;
   let startupScanTimer = null;
   const favorites = globalThis.createChanlumeFavorites({ getState: () => state, commit, openGroup: openSubscriptionGroup });
-  document.documentElement.classList.add("chanlume-disabled");
+  document.documentElement?.classList.add("chanlume-disabled");
 
   function publishPowerState() {
     window.postMessage({ source: IDENTITY_BRIDGE_SOURCE, type: "SET_ENABLED", enabled: state.settings.enabled }, location.origin);
@@ -41,6 +41,8 @@
 
   function pauseIntegration() {
     favorites.clear();
+    subscriptions.clear();
+    navigation.clear();
     observer.disconnect();
     subscriptionObserver.disconnect();
     clearTimeout(scanTimer);
@@ -57,7 +59,6 @@
     scanIdentityByAlias.clear();
     trackedSubscription = { channelId: "", subscribed: null };
     homeRedirecting = shortsRedirecting = false;
-    closePanel();
     document.documentElement.classList.add("chanlume-disabled");
     document.documentElement.classList.remove("chanlume-block-home", "chanlume-hide-shorts", "chanlume-hide-secondary", "chanlume-integrated");
     $$(".chanlume-hidden, .chanlume-shorts-hidden").forEach((card) => card.classList.remove("chanlume-hidden", "chanlume-shorts-hidden"));
@@ -73,6 +74,18 @@
   const isSubscriptionsPage = () => pageKind() === "subscriptions";
   const currentLanguage = () => Core.languageCode(state.settings?.language);
   function localizeExtensionUi(root) { Core.localizeDom(root, currentLanguage()); }
+
+  const subscriptions = globalThis.createChanlumeSubscriptions({
+    Core, getState: () => state, getActiveGroup: () => activeGroupId,
+    getCards: allCards, findChannel: findChannelInCard, isWatched: isWatchedCard,
+    openGroup: openSubscriptionGroup, commit, escape: escapeHtml
+  });
+  const navigation = globalThis.createChanlumeNavigation({
+    Core, getState: () => state, getActiveGroup: () => activeGroupId,
+    favorites, subscriptions, isSubscriptionsPage, pageKind, openSubscriptionGroup,
+    escapeHtml, localizeExtensionUi, currentLanguage, unfiledChannelIds,
+    changeSetting, startSubscriptionUpdate, toast
+  });
 
   function unfiledChannelIds() {
     return unfiledIds;
@@ -146,17 +159,24 @@
     }
     activeGroupId = validGroupId(groupId) ? groupId : "all";
     const url = new URL(location.href);
-    url.hash = `chanlume-group=${encodeURIComponent(activeGroupId)}`;
-    history.replaceState(history.state, "", url);
-    renderGroups();
+    const route = new URLSearchParams(url.hash.slice(1));
+    // Selecting a category is a scope change within Subscriptions. Keep its
+    // current view, layout, dates and search; leave management-only routes.
+    if (["collections", "favorites", "collection"].includes(route.get("chanlume-view"))) {
+      route.delete("chanlume-view");
+      for (const key of ["layout", "sort", "q", "channel-q", "from", "to"]) route.delete(key);
+    }
+    route.set("chanlume-group", activeGroupId);
+    url.hash = route.toString();
+    if (url.href !== location.href) history.pushState(history.state, "", url);
     renderIntegratedControls();
     applyFilters();
     return true;
   }
 
   async function readState() {
-    const result = await Core.readStoredValues(chrome.storage.local, STORAGE_KEY);
-    acceptState(result[STORAGE_KEY], true);
+    const stored = globalThis.ChanlumeStartup ? await globalThis.ChanlumeStartup.state : (await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY];
+    acceptState(stored, true);
     stateLoaded = true;
     return state;
   }
@@ -194,12 +214,12 @@
   }
 
   function refreshFromState() {
+    globalThis.ChanlumeStartup?.sync(state.settings.enabled);
     publishPowerState();
     if (!state.settings.enabled) { pauseIntegration(); return; }
     document.documentElement.classList.remove("chanlume-disabled");
     if (document.hidden) { pendingFullRefresh = true; pendingStructureRefresh = true; return; }
     updateObservation();
-    renderGroups();
     renderIntegratedControls();
     renderCurrentChannelControl();
     applyFilters();
@@ -454,79 +474,15 @@
   }
 
   function makeShell() {
-    const launcher = document.createElement("button");
-    launcher.id = "chanlume-launcher";
-    launcher.type = "button";
-    launcher.title = "開啟 Chanlume";
-    launcher.setAttribute("aria-label", "開啟 Chanlume 訂閱整理");
-    launcher.innerHTML = `<svg viewBox="0 0 24 24" width="25" height="25" fill="none" aria-hidden="true"><path d="M5 5.8A2.8 2.8 0 0 1 7.8 3H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7.8A2.8 2.8 0 0 1 5 16.2V5.8Z" fill="currentColor" opacity=".3"/><path d="M4 7a2 2 0 0 1 2-2h10.5a1.5 1.5 0 0 1 0 3H8v8h8.5a1.5 1.5 0 0 1 0 3H6a2 2 0 0 1-2-2V7Z" fill="currentColor"/><path d="m11 10 5 3-5 3v-6Z" fill="currentColor"/></svg>`;
-
-    const backdrop = document.createElement("div");
-    backdrop.id = "chanlume-backdrop";
-    const panel = document.createElement("aside");
-    panel.id = "chanlume-panel";
-    panel.setAttribute("aria-label", "Chanlume");
-    panel.innerHTML = `
-      <header class="cl-panel-header">
-        <div class="cl-logo"><svg viewBox="0 0 24 24" width="21" height="21" fill="white"><path d="M5 5.8A2.8 2.8 0 0 1 7.8 3H18a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7.8A2.8 2.8 0 0 1 5 16.2V5.8Zm6 4.2v6l5-3-5-3Z"/></svg></div>
-        <div class="cl-title-wrap"><h2 class="cl-title">Chanlume</h2><div class="cl-subtitle">你的 YouTube 訂閱書架</div></div>
-        <button class="cl-icon-button" data-action="close" aria-label="關閉"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="m7.4 6 4.6 4.6L16.6 6 18 7.4 13.4 12l4.6 4.6-1.4 1.4-4.6-4.6L7.4 18 6 16.6l4.6-4.6L6 7.4 7.4 6Z"/></svg></button>
-      </header>
-      <nav class="cl-page-switch" aria-label="YouTube 內容來源">
-        <button data-action="home" type="button"><span class="cl-page-icon">⌂</span><span><strong>首頁推薦</strong><small>YouTube 演算法</small></span></button>
-        <button data-action="subscriptions" type="button"><span class="cl-page-icon">▦</span><span><strong>訂閱內容</strong><small>Chanlume 群組</small></span></button>
-      </nav>
-      <p class="cl-page-note" id="cl-page-note"></p>
-      <section class="cl-section cl-groups-section">
-        <div class="cl-section-label"><span>訂閱群組</span><span id="cl-channel-total"></span></div>
-        <div class="cl-groups" id="cl-groups"></div>
-      </section>
-      <div class="cl-divider"></div>
-      <section class="cl-section cl-settings-section">
-        <div class="cl-section-label"><span>減少干擾</span></div>
-        <div class="cl-toggles">
-          <label class="cl-toggle-row"><span>封鎖首頁</span><button class="cl-switch" data-setting="blockHome" role="switch" aria-checked="false"></button></label>
-          <label class="cl-toggle-row"><span>關閉 Shorts</span><button class="cl-switch" data-setting="hideShorts" role="switch" aria-checked="false"></button></label>
-          <label class="cl-toggle-row"><span><strong>隱藏影片右側欄</strong><small>隱藏觀看頁的推薦內容，並預設關閉自動播放</small></span><button class="cl-switch" data-setting="hideSecondary" role="switch" aria-checked="false"></button></label>
-          <label class="cl-toggle-row"><span>關閉自動播放</span><button class="cl-switch" data-setting="disableAutoplay" role="switch" aria-checked="false"></button></label>
-          <label class="cl-toggle-row"><span>隱藏已觀看影片</span><button class="cl-switch" data-setting="hideWatched" role="switch" aria-checked="false"></button></label>
-        </div>
-      </section>
-      <footer class="cl-panel-footer">
-        <button class="cl-button" data-action="update-subscriptions">更新訂閱內容</button>
-        <button class="cl-button cl-primary" data-action="manage">管理群組</button>
-        <div class="cl-support-card"><a class="cl-support-link" href="https://buymeacoffee.com/tananis" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">☕</span><span>支持與回饋 ↗</span></a><p>有問題想回報，或有功能想許願？</p><small>用一杯咖啡支持開發，也把你的想法留給我。</small></div>
-      </footer>`;
-
-    const toast = document.createElement("div");
-    toast.className = "cl-toast";
-    toast.id = "cl-toast";
-    document.documentElement.append(launcher, backdrop, panel, toast);
-
-    launcher.addEventListener("click", openPanel);
-    backdrop.addEventListener("click", closePanel);
-    panel.addEventListener("click", onPanelClick);
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closePanel();
-    });
+    const node = document.createElement("div");
+    node.className = "cl-toast";
+    node.id = "cl-toast";
+    document.documentElement.append(node);
   }
-
-  function openPanel() {
-    if (document.fullscreenElement) return;
-    $("#chanlume-backdrop")?.classList.add("cl-open");
-    $("#chanlume-panel")?.classList.add("cl-open");
-  }
-
-  function closePanel() {
-    $("#chanlume-backdrop")?.classList.remove("cl-open");
-    $("#chanlume-panel")?.classList.remove("cl-open");
-  }
-
   function syncFullscreen() {
     const active = Boolean(document.fullscreenElement);
     document.documentElement.classList.toggle("chanlume-fullscreen", active);
     if (active) {
-      closePanel();
       document.querySelector('#chanlume-toolbar dialog[open]')?.close();
       setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false);
     }
@@ -542,176 +498,7 @@
     toast.timer = setTimeout(() => node.classList.remove("cl-show"), 2200);
   }
 
-  function renderGroups() {
-    if (!state.settings.enabled) return;
-    const host = $("#cl-groups");
-    if (!host) return;
-    const total = Object.keys(state.channels).length;
-    $("#cl-channel-total").textContent = `${total} 個頻道`;
-    const all = { id: "all", name: "全部訂閱", icon: "star", color: "#7c5cff", channelIds: Object.keys(state.channels) };
-    const unfiled = { id: "unfiled", name: "未分類", icon: "sparkles", color: "#f0a44b", channelIds: unfiledChannelIds() };
-    const currentPage = pageKind();
-    host.innerHTML = [all, unfiled, ...state.groups].map((group) => `
-      <button class="cl-group ${currentPage === "subscriptions" && group.id === activeGroupId ? "cl-active" : ""}" data-group="${escapeHtml(group.id)}">
-        <span class="cl-group-icon" style="color:${group.color};background:${group.color}20">${Core.iconSvg(group.icon, "currentColor", 18)}</span>
-        <span><span class="cl-group-name">${escapeHtml(group.name)}</span><span class="cl-group-count" style="display:block">${group.id === "all" ? "目前已收集" : group.id === "unfiled" ? "等待整理" : "已分類"}</span></span>
-        <span class="cl-pill">${group.channelIds.length}</span>
-      </button>`).join("");
-    $$('[data-action="home"], [data-action="subscriptions"]', $("#chanlume-panel")).forEach((button) => {
-      const active = button.dataset.action === currentPage;
-      button.classList.toggle("cl-active", active);
-      button.setAttribute("aria-current", active ? "page" : "false");
-    });
-    const homeButton = $('[data-action="home"]', $("#chanlume-panel"));
-    if (homeButton) homeButton.hidden = Boolean(state.settings.blockHome);
-    const pageNote = $("#cl-page-note");
-    if (pageNote) pageNote.textContent = currentPage === "home"
-      ? state.settings.blockHome ? "首頁推薦目前已封鎖，將直接前往訂閱內容。" : "首頁由 YouTube 演算法決定，不套用訂閱群組。"
-      : currentPage === "subscriptions" ? "只有訂閱內容會套用群組與已觀看影片篩選。" : "這個頁面不套用訂閱群組；減少干擾設定仍然有效。";
-    $$('[data-setting]', $("#chanlume-panel")).forEach((button) => button.setAttribute("aria-checked", String(Boolean(state.settings[button.dataset.setting]))));
-    localizeExtensionUi($("#chanlume-launcher"));
-    localizeExtensionUi($("#chanlume-panel"));
-  }
-
-  function integratedSignature() {
-    return JSON.stringify({
-      activeGroupId,
-      favorites: favorites.active(),
-      groups: state.groups.map((group) => [group.id, group.name, group.icon, group.color, group.channelIds.length]),
-      channels: Object.keys(state.channels).length,
-      settings: state.settings,
-      page: pageKind()
-    });
-  }
-
-  function groupButtons(className) {
-    const all = { id: "all", name: "全部", icon: "star", color: "#7c5cff", channelIds: Object.keys(state.channels) };
-    const unfiled = { id: "unfiled", name: "未分類", icon: "sparkles", color: "#f0a44b", channelIds: unfiledChannelIds() };
-    return [all, unfiled, ...state.groups].map((group) => {
-      if (className === "cl-guide-item") {
-        return `<button class="cl-guide-item ${isSubscriptionsPage() && !favorites.active() && group.id === activeGroupId ? "cl-active" : ""}" data-cl-group="${escapeHtml(group.id)}" type="button"><span class="cl-guide-dot" style="color:${group.color};background:${group.color}20">${Core.iconSvg(group.icon, "currentColor", 15)}</span><span class="cl-guide-name">${escapeHtml(group.id === "all" ? "全部訂閱" : group.name)}</span><span class="cl-guide-count">${group.channelIds.length}</span></button>`;
-      }
-      const selected = isSubscriptionsPage() && !favorites.active() && group.id === activeGroupId;
-      const name = ["all", "unfiled"].includes(group.id) ? Core.translateUiText(group.name, currentLanguage()) : group.name;
-      return `<button class="cl-toolbar-chip ${selected ? "cl-active" : ""}" data-cl-group="${escapeHtml(group.id)}" type="button" aria-pressed="${selected}" title="${escapeHtml(name)} · ${group.channelIds.length} ${Core.translateUiText("個頻道", currentLanguage())}"><span class="cl-chip-dot" style="background:${group.color}"></span><span translate="no">${escapeHtml(name)}</span><small>${group.channelIds.length}</small></button>`;
-    }).join("");
-  }
-
-  function mountIntegratedControls() {
-    const guideSections = document.querySelector("ytd-guide-renderer #sections");
-    if (guideSections && !document.getElementById("chanlume-guide-section")) {
-      const section = document.createElement("section");
-      section.id = "chanlume-guide-section";
-      section.addEventListener("click", onIntegratedClick);
-      guideSections.insertBefore(section, guideSections.children[1] || null);
-    }
-
-    if (!isSubscriptionsPage()) document.getElementById("chanlume-toolbar")?.remove();
-    const browse = isSubscriptionsPage() ? document.querySelector('ytd-browse[page-subtype="subscriptions"]') : null;
-    const primary = browse?.querySelector("#primary");
-    if (primary && !document.getElementById("chanlume-toolbar")) {
-      const toolbar = document.createElement("div");
-      toolbar.id = "chanlume-toolbar";
-      toolbar.addEventListener("click", onIntegratedClick);
-      primary.insertBefore(toolbar, primary.firstChild);
-    }
-    const visibleGuide = document.getElementById("chanlume-guide-section");
-    document.documentElement.classList.toggle("chanlume-integrated", Boolean(visibleGuide || document.getElementById("chanlume-toolbar")));
-  }
-
-  function renderIntegratedControls() {
-    if (!state.settings.enabled) return;
-    mountIntegratedControls();
-    favorites.render();
-    const signature = integratedSignature();
-    const guide = document.getElementById("chanlume-guide-section");
-    if (guide && guide.dataset.signature !== signature) {
-      guide.dataset.signature = signature;
-      guide.innerHTML = `<div class="cl-favorite-entry"><button class="cl-guide-item ${favorites.active() ? "cl-active" : ""}" data-cl-action="favorites" type="button" aria-current="${favorites.active() ? "page" : "false"}"><span class="cl-guide-dot">☆</span><span class="cl-guide-name">最關注頻道</span></button></div><div class="cl-guide-heading"><span>Chanlume 群組</span><span class="cl-guide-actions"><button class="cl-guide-toggle" data-cl-action="toggle-guide" type="button"><span aria-hidden="true">▴</span></button><button data-cl-action="update-subscriptions" type="button" title="更新訂閱內容" aria-label="更新訂閱內容">↻</button><button data-cl-action="manage" type="button" title="管理群組" aria-label="管理 Chanlume 群組">＋</button></span></div><div class="cl-guide-list">${groupButtons("cl-guide-item")}</div>`;
-      localizeExtensionUi(guide);
-    }
-    if (guide) {
-      guide.classList.toggle("cl-collapsed", guideCollapsed);
-      const toggle = guide.querySelector(".cl-guide-toggle");
-      const toggleLabel = Core.translateUiText(guideCollapsed ? "展開 Chanlume 群組" : "收合 Chanlume 群組", currentLanguage());
-      toggle?.setAttribute("aria-expanded", String(!guideCollapsed));
-      toggle?.setAttribute("title", toggleLabel);
-      toggle?.setAttribute("aria-label", toggleLabel);
-    }
-    const toolbar = document.getElementById("chanlume-toolbar");
-    if (toolbar && toolbar.dataset.signature !== signature) {
-      toolbar.dataset.signature = signature;
-      const scrollLeft = toolbar.querySelector('.cl-toolbar-groups')?.scrollLeft || 0;
-      toolbar.querySelector('dialog')?.close();
-      toolbar.innerHTML = `<button class="cl-toolbar-action" data-cl-action="scroll-left" type="button" aria-label="向左捲動群組">‹</button><div class="cl-toolbar-groups" role="group" aria-label="訂閱群組">${groupButtons("cl-toolbar-chip")}</div><button class="cl-toolbar-action" data-cl-action="scroll-right" type="button" aria-label="向右捲動群組">›</button><div class="cl-toolbar-tools"><button class="cl-toolbar-search" data-cl-action="find-group" type="button">搜尋群組</button><button class="cl-toolbar-action" data-cl-action="manage" type="button" title="管理群組" aria-label="開啟 Chanlume 群組與設定">${Core.iconSvg("book", "currentColor", 18)}</button></div><dialog class="cl-group-picker" aria-labelledby="cl-group-picker-title"><header><h2 id="cl-group-picker-title">訂閱群組</h2><button class="cl-button" data-cl-action="close-picker" type="button">關閉</button></header><input class="cl-group-search" type="search" placeholder="搜尋群組" aria-label="搜尋群組"><div class="cl-group-picker-list">${groupButtons("cl-toolbar-chip").replaceAll('data-cl-group=', 'data-cl-pick-group=')}</div></dialog>`;
-      localizeExtensionUi(toolbar);
-      const strip = toolbar.querySelector('.cl-toolbar-groups');
-      strip.scrollLeft = scrollLeft;
-      const activeChip = strip.querySelector('.cl-active');
-      if (activeChip) {
-        const chipRect = activeChip.getBoundingClientRect(), stripRect = strip.getBoundingClientRect();
-        if (chipRect.left < stripRect.left) strip.scrollLeft += chipRect.left - stripRect.left;
-        else if (chipRect.right > stripRect.right) strip.scrollLeft += chipRect.right - stripRect.right;
-      }
-      toolbar.querySelector('.cl-group-search').addEventListener('input', (event) => {
-        const query = event.target.value.trim().toLocaleLowerCase();
-        toolbar.querySelectorAll('[data-cl-pick-group]').forEach((button) => { button.hidden = !button.textContent.toLocaleLowerCase().includes(query); });
-      });
-    }
-  }
-
-  async function onIntegratedClick(event) {
-    const picked = event.target.closest('[data-cl-pick-group]')?.dataset.clPickGroup;
-    if (picked) { document.querySelector('#chanlume-toolbar dialog')?.close(); openSubscriptionGroup(picked); return; }
-    const groupId = event.target.closest("[data-cl-group]")?.dataset.clGroup;
-    const action = event.target.closest("[data-cl-action]")?.dataset.clAction;
-    const setting = event.target.closest("[data-cl-setting]")?.dataset.clSetting;
-    if (action === "find-group") { document.querySelector('#chanlume-toolbar dialog')?.showModal(); return; }
-    if (action === "close-picker") { document.querySelector('#chanlume-toolbar dialog')?.close(); return; }
-    if (action === "scroll-left" || action === "scroll-right") {
-      const strip = document.querySelector('.cl-toolbar-groups');
-      strip?.scrollBy({ left: strip.clientWidth * (action === "scroll-left" ? -.7 : .7), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? "instant" : "smooth" });
-      return;
-    }
-    if (groupId) {
-      openSubscriptionGroup(groupId);
-      return;
-    }
-    if (setting) {
-      await changeSetting(setting, !state.settings[setting]);
-      return;
-    }
-    if (action === "favorites") {
-      if (!isSubscriptionsPage()) { location.assign("https://www.youtube.com/feed/subscriptions#chanlume-view=favorites"); return; }
-      location.hash = "chanlume-view=favorites";
-      renderIntegratedControls();
-      return;
-    }
-    if (action === "toggle-guide") {
-      guideCollapsed = !guideCollapsed;
-      renderIntegratedControls();
-      return;
-    }
-    if (action === "manage") openPanel();
-    if (action === "update-subscriptions") await startSubscriptionUpdate();
-  }
-
-  async function onPanelClick(event) {
-    const action = event.target.closest("[data-action]")?.dataset.action;
-    const groupId = event.target.closest("[data-group]")?.dataset.group;
-    const setting = event.target.closest("[data-setting]")?.dataset.setting;
-    if (action === "close") closePanel();
-    if (action === "manage") chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD" });
-    if (action === "update-subscriptions") await startSubscriptionUpdate();
-    if (action === "home") { location.assign("https://www.youtube.com/"); return; }
-    if (action === "subscriptions") { openSubscriptionGroup("all"); return; }
-    if (groupId) {
-      if (openSubscriptionGroup(groupId)) toast(groupId === "all" ? "顯示全部訂閱" : groupId === "unfiled" ? "只顯示未分類頻道" : `只顯示「${state.groups.find((g) => g.id === groupId)?.name || "群組"}」`);
-    }
-    if (setting) {
-      await changeSetting(setting, !state.settings[setting]);
-    }
-  }
+  function renderIntegratedControls() { globalThis.ChanlumeStartup?.sync(state.settings.enabled); navigation.render(); }
 
   async function changeSetting(setting, enabled) {
     await commit({ type: "set-setting", payload: { setting, enabled } });
@@ -926,15 +713,18 @@
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === "OPEN_CHANLUME") {
       if (!state.settings.enabled) { sendResponse({ ok: false, disabled: true }); return; }
-      if (["all", "unfiled"].includes(message.groupId) || state.groups.some((group) => group.id === message.groupId)) activeGroupId = message.groupId;
-      if (message.groupId && !isSubscriptionsPage()) {
-        location.assign(Core.subscriptionGroupUrl(activeGroupId));
+      if (message.groupId) {
+        const navigating = !isSubscriptionsPage();
+        openSubscriptionGroup(validGroupId(message.groupId) ? message.groupId : "all");
+        sendResponse({ ok: true, navigating });
+        return;
+      }
+      if (!isSubscriptionsPage()) {
+        openSubscriptionGroup("all");
         sendResponse({ ok: true, navigating: true });
         return;
       }
-      renderGroups();
-      applyFilters();
-      openPanel();
+      document.getElementById("chanlume-shelf-sticky")?.scrollIntoView({ block: "start" });
       sendResponse({ ok: true });
     }
   });
@@ -956,7 +746,8 @@
       if (changedNodes.length && changedNodes.every((node) => node instanceof Element && node.matches(OWN_UI_SELECTOR))) continue;
       const subscriptionTarget = target?.closest("ytd-subscribe-button-renderer, yt-subscribe-button-view-model");
       if (mutation.type === "attributes" && ["style", "class", "hidden", "aria-label"].includes(mutation.attributeName) && !subscriptionTarget && (!isSubscriptionsPage() || !state.settings.hideWatched || !target?.matches('#progress, [class*="Progress"], [class*="progress"]'))) continue;
-      if (subscriptionTarget) structure = true;
+      if (subscriptionTarget || target?.closest("ytd-guide-renderer, ytd-mini-guide-renderer, ytd-browse[page-subtype=\"subscriptions\"] #primary")) structure = true;
+      if (isSubscriptionsPage() && target?.closest('ytd-rich-shelf-renderer')) structure = true;
       if (trackCards && mutation.target instanceof Element) {
         const targetCard = canonicalCard(mutation.target);
         if (targetCard) cards.add(targetCard);
@@ -977,28 +768,32 @@
     if (options.structure) pendingStructureRefresh = true;
     options.cards?.forEach((card) => pendingCards.add(card));
     if (document.hidden) { pendingFullRefresh = true; pendingCards.clear(); return; }
+    if (scanTimer === -1) return;
     // Keep the first deadline: a busy feed must not postpone filtering indefinitely.
     if (scanTimer !== null && delay !== 0) return;
     if (scanTimer !== null) clearTimeout(scanTimer);
-    scanTimer = setTimeout(() => {
+    const flush = () => {
       scanTimer = null;
+      if (!state.settings.enabled || document.hidden) return;
       const full = pendingFullRefresh;
       const structure = pendingStructureRefresh;
       const cards = full ? null : [...pendingCards].filter((card) => card.isConnected);
       pendingFullRefresh = false;
       pendingStructureRefresh = false;
       pendingCards.clear();
-      if (full) renderGroups();
       if (full || structure) renderIntegratedControls();
       if (full || structure) renderCurrentChannelControl();
       applyFilters(cards);
+      subscriptions.update();
       if (structure) scheduleSubscriptionSync();
-    }, delay);
+    };
+    if (delay === 0) { scanTimer = -1; queueMicrotask(flush); }
+    else scanTimer = setTimeout(flush, delay);
   }
 
   const observer = new MutationObserver((mutations) => {
     const work = collectMutationWork(mutations);
-    if (work.structure || work.cards.size) scheduleRefresh(32, work);
+    if (work.structure || work.cards.size) scheduleRefresh(0, work);
   });
 
   const subscriptionObserver = new MutationObserver(() => scheduleRefresh(32, { structure: true }));
@@ -1030,10 +825,16 @@
   }
 
   async function init() {
+    const reading = readState();
+    if (!document.body) await new Promise(resolve => {
+      const waiting = new MutationObserver(() => { if (document.body) { waiting.disconnect(); resolve(); } });
+      waiting.observe(document, { childList: true, subtree: true });
+    });
     makeShell();
-    await readState();
+    await reading;
     syncActiveGroupFromLocation();
     refreshFromState();
+    globalThis.ChanlumeStartup?.finish();
     scheduleSubscriptionSync();
     applyFilters();
     updateObservation();
@@ -1046,13 +847,14 @@
       scheduleRefresh(0, { full: true, structure: true });
     });
     window.addEventListener("hashchange", () => { syncActiveGroupFromLocation(); scheduleRefresh(0, { full: true }); });
+    window.addEventListener("popstate", () => { syncActiveGroupFromLocation(); scheduleRefresh(0, { full: true }); });
     document.addEventListener("click", (event) => {
       if (!state.settings.enabled) return;
       if (event.isTrusted && event.target.closest(".ytp-autonav-toggle-button")) autoplayRestore = null;
       const button = event.target.closest("button");
       if (!button) return;
       const label = `${button.getAttribute("aria-label") || ""} ${button.textContent || ""}`;
-      if (/subscribe|unsubscribe|訂閱|订阅/i.test(label) && !button.closest("#chanlume-panel, #chanlume-channel-control")) scheduleSubscriptionSync();
+      if (/subscribe|unsubscribe|訂閱|订阅/i.test(label) && !button.closest("#chanlume-channel-control")) scheduleSubscriptionSync();
     }, true);
     document.addEventListener("visibilitychange", () => {
       updateObservation();
@@ -1060,12 +862,12 @@
     });
     syncFullscreen();
     document.addEventListener("fullscreenchange", syncFullscreen);
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closePanel(); setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); } });
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); });
     document.addEventListener("click", (event) => { if (!event.target.closest('#chanlume-channel-control')) setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); });
     window.addEventListener("resize", () => setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false));
     document.addEventListener("scroll", (event) => { if (!(event.target instanceof Element) || !event.target.closest('.cl-current-menu')) setCurrentMenuOpen(document.getElementById("chanlume-channel-control"), false); }, true);
     if (state.settings.enabled && location.pathname === "/feed/channels" && location.hash === "#chanlume-update-subscriptions") startupScanTimer = setTimeout(runSubscriptionUpdate, 900);
   }
 
-  init();
+  init().catch(error => { navigation.clear(); subscriptions.clear(); favorites.clear(); globalThis.ChanlumeStartup?.release(); console.warn("Chanlume initialization failed", error); });
 })();

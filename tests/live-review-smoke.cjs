@@ -1,0 +1,51 @@
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const fs = require('node:fs');
+const {chromium} = require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright'));
+(async()=>{
+ const browser=await chromium.launch({channel:'msedge',headless:true});
+ const page=await browser.newPage({viewport:{width:1864,height:1040}}), errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ const output='work/subscriptions-ui-20261020/live-review';fs.mkdirSync(output,{recursive:true});
+ try {
+  await page.route('https://i.ytimg.com/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#343444"/><circle cx="320" cy="180" r="100" fill="#5c5068"/></svg>'}));
+  await page.goto('http://127.0.0.1:18766/tests/shelf-harness.html');
+  await page.locator('#chanlume-subscriptions-page').waitFor();
+  const toggle=page.locator('#chanlume-guide-section .cl-guide-toggle');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await toggle.locator('span').evaluate(el=>getComputedStyle(el).transform),'none');
+  await toggle.click();
+  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.cl-guide-toggle span')).transform==='matrix(-1, 0, 0, -1, 0, 0)');
+  const disclosure=page.locator('[data-cl-action=toggle-channels]');
+  await disclosure.click();assert.equal(await disclosure.getAttribute('aria-label'),'Collapse subscribed channels');
+  await page.evaluate(()=>{
+   const next=structuredClone(__state());
+   next.channels['/@demo0'].url='https://www.youtube.com/@'+encodeURIComponent('うさことはむこ'.repeat(10));
+   next.channels['/@demo1'].url='https://www.youtube.com/@%broken';
+   next.revision++;__change(next);
+  });
+  await page.locator('#chanlume-shelf-sticky [data-shelf-action=directory]').click();
+  const handle=page.locator('.cl-channel-identity small').first();
+  assert.equal(await handle.innerText(),'@'+'うさことはむこ'.repeat(10));
+  assert.equal(await page.locator('.cl-channel-identity small').nth(1).innerText(),'Subscribed channel');
+  assert.equal(await handle.evaluate(el=>el.getBoundingClientRect().right<=el.closest('.cl-shelf-channel').getBoundingClientRect().right),true);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.screenshot({path:`${output}/channels-fixture-after.png`});
+  await page.locator('[data-shelf-input=view]').selectOption('timeline');
+  await page.locator('.cl-shelf-video').first().waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll('.cl-shelf-video').length===12);
+  await page.locator('.cl-shelf-thumb img').evaluateAll(imgs=>Promise.all(imgs.filter(i=>i.getBoundingClientRect().top<innerHeight).map(i=>i.decode())));
+  assert.equal(await page.locator('.cl-shelf-body .cl-recent-status, .cl-shelf-source-note, .cl-shelf-date-note').count(),0);
+  assert.equal(await page.locator('.cl-shelf-videos').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),4);
+  assert.ok(await page.locator('.cl-shelf-video-info > .cl-shelf-avatar').count()>0);
+  await page.screenshot({path:`${output}/timeline-fixture-after.png`});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.locator('.cl-shelf-videos').first().evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  assert.equal(await page.locator('.cl-feed-menu').count(),0);
+  assert.equal(await page.evaluate(()=>(globalThis.__recentCalls||[]).length),0);
+  assert.deepEqual(errors,[]);
+  console.log('PASS live review regressions: encoded/malformed handles, card containment, disclosure direction/labels, four-column desktop and single-column mobile, channel avatar slots.');
+ } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

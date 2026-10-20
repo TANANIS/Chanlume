@@ -19,6 +19,8 @@
 
 <img src="outputs/store-assets/screenshot-library-1280x800.png" alt="Chanlume subscription library with synthetic demo data" width="800">
 
+The latest **local development preview** is `outputs/Chanlume-1.23.3-ui-preview-20261020.zip`. The Subscriptions feed is the **sole video source** for Feed, Timeline and channel previews: Chanlume filters/reformats YouTube's loaded native cards, including older pages loaded by YouTube's native scrolling. 1.23.3 preserves the native grid's layout during document-start styling and **defers custom layout until YouTube has mounted its first content/continuation**. An initially empty custom view displays a localized loading state instead of incorrectly claiming there are no matching videos. **Installed signed-in Helium acceptance passed on 2026-10-20**: full reload directly into Timeline populated YouTube cards without switching to Feed, two continuation boundaries appended older videos, all 367 Timeline IDs were unique in a 506-card loaded source, Channels retained 410 synced channels, and returning to native Feed and back worked. Longer scrolling eventually loaded 2,606 native cards and 40 unique videos in the selected `生活與解壓` group. These counts reflect only the loaded portion of the feed, not all subscription history. No per-channel public-video fetch, remote server or state schema change is involved. Public/stable release remains **1.19.4**; 1.23.3 is a **development preview, not a store release**. Keep the existing unpacked extension entry and ID to preserve the local library. See `HANDOFF.md` for details.
+
 ## Download & install
 
 **[Download Chanlume 1.19.4](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.19.4.zip)**
@@ -215,6 +217,10 @@ The default interface is English unless a Traditional Chinese browser locale is 
 - Node.js unit tests plus Playwright UI smoke tests
 
 ## Development and verification
+
+Local UI preview (2026-10-20): `outputs/Chanlume-1.22.2-ui-preview-20261020.zip` displays `1.22.2 UI Preview`. The signed-in browser review reproduced overflowing encoded handles, reversed disclosure arrows and distracting feed diagnostics. This candidate contains handles, improves custom video cards and moves update/progress/retry details into the toolbar ellipsis menu. Main content no longer displays fetch/source boilerplate. 78 tests and 13 browser harnesses pass. Source, unpacked mirror and all 40 ZIP entries match. Reload the existing extension entry before refreshing YouTube; installed 1.22.2 verification remains pending because browser policy blocks extension internal pages. See `work/subscriptions-ui-20261020/live-review/VALIDATION.md`.
+
+When Edge is unavailable, set `CHANLUME_BROWSER` to an existing Playwright Chromium executable before using `tests/local-fixture-preload.cjs`. This runs synthetic fixtures in an isolated temporary browser profile.
 
 Core checks can be run with Node.js:
 

@@ -26,10 +26,51 @@
     return String(hash).replace(/([#&])tubeshelf-(group|view|update-subscriptions)(?==|&|$)/g, "$1chanlume-$2");
   }
   const UI_TEXT_EN = {
+    "讀取頻道近期影片中": "Loading recent videos", "已讀取頻道": "Channels checked", "載入更多頻道": "Load more channels",
+    "個頻道未能更新；已取得的影片會保留，可能不是最新結果。": "channels could not be updated. Retained videos may be older.",
+    "目前沒有可取得的近期影片": "No recent videos available", "搜尋近期影片": "Search recent videos",
+    "沒有符合的近期影片": "No matching recent videos", "可調整搜尋與日期範圍，或更新影片。": "Adjust your search or dates, or refresh videos.",
+    "展開頻道即可讀取近期影片。": "Expand a channel to read its recent videos.",
+    "各頻道最近可取得的十五部影片；可更新以取得新內容。": "Up to fifteen recent videos per channel. Refresh to check for new content.",
+    "取得發布日期後可用": "Available once publication dates are retrieved", "訂閱頻道": "Subscribed channel",
+
+    "排序": "Sort",
+    "時間軸": "Timeline", "搜尋訂閱頻道": "Search subscriptions", "內容範圍": "Scope",
+    "名冊順序": "Library order", "頻道名稱": "Channel name", "來源順序": "Source order",
+    "最新日期": "Newest date", "最舊日期": "Oldest date", "日期範圍": "Date range",
+    "起始日期": "From", "結束日期": "To", "清除日期": "Clear dates", "返回群組收藏": "Back to collections",
+    "頻道來自已同步名冊；展開後顯示目前已載入的影片。": "Your synced channel library. Expand a channel to see its loaded videos.",
+    "此頻道的影片尚未載入，不代表沒有更新。": "Videos from this channel are not loaded yet. It may have newer content.",
+    "此頻道尚未出現在已載入的訂閱動態中，往下捲動可繼續尋找較舊的影片。": "This channel has not appeared in the loaded subscription feed yet. Scroll down to find older videos.",
+    "目前載入的影片中沒有符合的內容": "No matching videos in the loaded feed",
+    "正在載入 YouTube 訂閱影片…": "Loading YouTube subscription videos…",
+    "往下捲動，YouTube 會繼續載入更舊的訂閱影片。": "Scroll down to let YouTube load older subscription videos.",
+    "近期影片": "Recent videos", "直播中": "Live now",
+    "找不到符合的頻道": "No matching channels", "此範圍尚無頻道": "No channels in this scope",
+    "可更新訂閱名冊，或調整搜尋及群組範圍。": "Update subscriptions, or adjust your search and scope.",
+    "未提供確切日期": "Exact date unavailable",
+    "部影片尚無發布日期；日期篩選不會包含這些影片。": "videos have no publication date and are excluded from date filters.",
+
+    "主要導覽": "Main navigation", "首頁": "Home", "探索": "Explore",
+    "觀看記錄": "History", "稍後觀看": "Watch later", "喜歡的影片": "Liked videos", "播放清單": "Playlists",
+    "所有訂閱頻道": "All channels", "展開訂閱頻道": "Expand subscribed channels", "收合訂閱頻道": "Collapse subscribed channels", "群組與設定": "Groups and settings",
+    "群組收藏": "Collections", "訂閱頁面": "Subscription pages", "動態": "Feed", "依頻道": "Channels",
+    "訂閱分類": "Subscription categories", "展開分類列": "Expand category strip", "收合分類列": "Collapse category strip",
+    "檢視方式": "View", "版面配置": "Layout", "網格": "Grid", "清單": "List",
+    "新增群組": "New collection", "編輯群組": "Edit collection", "管理成員": "Manage members", "瀏覽群組": "View collection",
+    "搜尋群組與成員": "Search collections and members", "搜尋已載入的影片": "Search loaded videos",
+    "只顯示 YouTube 已載入的訂閱內容。": "Showing subscription content already loaded by YouTube.",
+    "把頻道放進群組，打造自己的訂閱書架。": "Put channels into collections and build your own subscription shelf.",
+    "找不到符合的群組": "No matching collections", "建立你的第一個群組": "Create your first collection",
+    "尚未加入頻道，選擇管理成員開始整理。": "No channels yet. Choose Manage members to get started.",
+    "查看全部成員": "View all members", "部已載入影片": "loaded videos", "其他頻道": "Other channels",
+    "沒有符合的已載入影片": "No matching loaded videos", "回到訂閱動態": "Back to feed",
+    "回到動態並往下捲動，讓 YouTube 載入更多影片。": "Return to Feed and scroll down to let YouTube load more videos.",
+    "群組顏色": "Collection color", "展開": "Expand", "收合": "Collapse",
     "點擊頻道可在 YouTube 開啟；使用詳細資料調整分類。": "Open a channel on YouTube; use Details to edit its groups.",
     "在 YouTube 開啟": "Open on YouTube", "詳細資料": "Details",
     "最關注頻道": "Favorites", "挑選你最想關注的頻道，集中查看最新影片。": "Choose the channels you care about and catch up on their latest videos.",
-    "新增頻道": "Add channels", "管理關注頻道": "Manage favorites", "更新影片": "Refresh videos", "最新影片": "Latest videos",
+    "新增頻道": "Add channels", "管理關注頻道": "Manage favorites", "群組": "Collection", "管理此群組": "Manage Collection", "群組內容": "Collection", "影片": "Videos", "已訂閱": "Subscribed", "自訂順序": "Custom order", "目前提供影片內容": "Video content is available", "更多內容選項": "More content options", "載入中…": "Loading…", "更新影片": "Refresh videos", "最新影片": "Latest videos",
     "搜尋群組": "Find group", "向左捲動群組": "Scroll groups left", "向右捲動群組": "Scroll groups right",
     "連線失敗或逾時，請稍後重試。": "Connection failed or timed out. Please retry shortly.",
     "YouTube 暫時拒絕讀取，請稍後重試。": "YouTube temporarily refused the request. Please retry shortly.",
@@ -811,6 +852,33 @@
     return videos;
   }
 
+  function parseYouTubeAtomFeed(xml, expectedChannelId) {
+    if (!/<feed\b/.test(xml) || !/<\/feed\s*>/.test(xml) || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error("Invalid YouTube feed");
+    const decode = value => value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1").replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (_, entity) => {
+      if (entity[0] !== "#") return ({amp:"&",lt:"<",gt:">",quot:'"',apos:"'"})[entity.toLowerCase()];
+      const code = entity[1].toLowerCase() === "x" ? parseInt(entity.slice(2),16) : Number(entity.slice(1));
+      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
+    });
+    const header = xml.split(/<entry\b/)[0];
+    const owner = header.match(/<yt:channelId>([^<]+)<\/yt:channelId>/)?.[1]?.trim();
+    const canonicalOwner = header.match(/<uri>\s*https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{22})\s*<\/uri>/)?.[1];
+    // The current Atom header sometimes omits UC; corroborate with its canonical owner URI.
+    if (owner !== expectedChannelId && !(owner === expectedChannelId.slice(2) && canonicalOwner === expectedChannelId)) throw new Error("YouTube feed owner mismatch");
+    const videos = new Map();
+    for (const match of xml.matchAll(/<entry\b[^>]*>([\s\S]*?)<\/entry>/g)) {
+      const entry = match[1], id = entry.match(/<yt:videoId>([^<]+)<\/yt:videoId>/)?.[1];
+      const entryOwner = entry.match(/<yt:channelId>([^<]+)<\/yt:channelId>/)?.[1]?.trim();
+      if (entryOwner && entryOwner !== expectedChannelId) throw new Error("YouTube entry owner mismatch");
+      const title = decode(entry.match(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/)?.[1] || "").trim();
+      const published = entry.match(/<published>([^<]+)<\/published>/)?.[1] || "";
+      const day = published.slice(0,10), date = new Date(day + "T00:00:00Z");
+      if (!/^[\w-]{11}$/.test(id || "") || !title || !/^\d{4}-\d{2}-\d{2}T/.test(published) || !Number.isFinite(Date.parse(published)) || !Number.isFinite(date.getTime()) || date.toISOString().slice(0,10) !== day) continue;
+      videos.set(id, {id, title:title.slice(0,500), published, publishedLabel:"", format:"video"});
+    }
+    if (/<entry\b/.test(xml) && !videos.size) throw new Error("Invalid YouTube feed entries");
+    return [...videos.values()].sort((a,b)=>Date.parse(b.published)-Date.parse(a.published)).slice(0,15);
+  }
+
   function parseYouTubeInitialData(source) {
     source = String(source || "");
     // YouTube now serves inert JSON instead of an inline assignment. Parse data,
@@ -860,7 +928,7 @@
         if (lockup && lockup.contentType !== "LOCKUP_CONTENT_TYPE_VIDEO") return;
         const id = video?.videoId || lockup?.contentId;
         const title = video ? text(video.title) : lockup?.metadata?.lockupMetadataViewModel?.title?.content;
-        if (/^[\w-]{11}$/.test(id || "") && title) result.set(id, { id, title: String(title).slice(0, 500), published: "", publishedLabel: video ? text(video.publishedTimeText) : "", format: "video" });
+        if (/^[\w-]{11}$/.test(id || "") && title) result.set(id, { id, title: String(title).slice(0, 500), published: "", publishedLabel: video ? text(video.publishedTimeText) : "", format: "video", duration: video ? text(video.lengthText).slice(0,20) : "", viewCountLabel: video ? text(video.viewCountText).slice(0,100) : "" });
         return;
       }
       Object.values(node).forEach(visit);
@@ -1317,6 +1385,7 @@
     unfiledChannelIds,
     collectRecentVideos,
     parseYouTubeInitialData,
+    parseYouTubeAtomFeed,
     collectChannelUploads,
     collectRecentVideoTitles,
     buildLearnedProfiles,

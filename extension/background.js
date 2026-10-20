@@ -6,6 +6,53 @@ const API_KEY_STORAGE = "chanlumeYouTubeApiKey";
 let stateWriteQueue = Promise.resolve();
 const favoriteFeedCache = new Map();
 const favoriteFeedPending = new Map();
+const recentFeedCache = new Map();
+const recentFeedPending = new Map();
+
+async function readRecentFeed(identity, force = false) {
+  const state = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
+  const id = Core.resolveChannelRecordId(state, identity), channel = state.channels[id];
+  if (!state.settings.enabled || !channel) throw Object.assign(new Error("Channel unavailable"), {code:"UNAVAILABLE"});
+  const url = new URL(channel.url);
+  if (url.origin !== "https://www.youtube.com" || !/^\/(?:@[^/]+|channel\/UC[\w-]+)\/?$/.test(url.pathname)) throw new Error("Invalid channel URL");
+  const base = url.origin + url.pathname.replace(/\/$/, ""), hideShorts = state.settings.hideShorts;
+  const key = `${id}:${base}:${hideShorts}`;
+  const cached = recentFeedCache.get(key);
+  if (!force && cached && Date.now()-cached.fetchedAt < 300000) return cached;
+  if (recentFeedPending.has(key)) return recentFeedPending.get(key);
+  if (recentFeedPending.size + favoriteFeedPending.size >= 3) throw Object.assign(new Error("Feed requests busy"),{code:"BUSY"});
+  const promise = (async () => {
+    const controller = new AbortController(), timer = setTimeout(()=>controller.abort(),20000);
+    const get = async (address, limit) => {
+      const response = await fetch(address,{signal:controller.signal,credentials:"omit",cache:"no-store"});
+      if (!response.ok) throw Object.assign(new Error(`YouTube ${response.status}`),{code:"HTTP"});
+      const source = await response.text(); if (source.length>limit) throw Object.assign(new Error("Response too large"),{code:"PARSE"});
+      return source;
+    };
+    try {
+      let channelId = /^UC[\w-]{22}$/.test(channel.channelId) ? channel.channelId : "", uploads;
+      if (hideShorts || !channelId) {
+        const source = await get(base+"/videos",10000000), data = Core.parseYouTubeInitialData(source);
+        const owner = data.metadata?.channelMetadataRenderer?.externalId || source.match(/<meta\s+itemprop="channelId"\s+content="(UC[\w-]{22})"/)?.[1] || "";
+        if (!/^UC[\w-]{22}$/.test(owner) || (channelId && owner !== channelId)) throw Object.assign(new Error("Could not verify channel owner"),{code:"PARSE"});
+        channelId = owner;
+        if (hideShorts) uploads = Core.collectChannelUploads(data);
+      }
+      let dated = [], dateWarning = "";
+      try { dated = Core.parseYouTubeAtomFeed(await get(`https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`,1000000),channelId); }
+      catch(error) { if (!uploads) throw error; dateWarning = error.code || (["AbortError","TimeoutError","TypeError"].includes(error.name)?"NETWORK":"PARSE"); }
+      const dates = new Map([...(cached?.videos || []),...dated].filter(v=>v.published).map(v=>[v.id,v]));
+      const videos = (uploads || dated).slice(0,15).map(video=>({...video, published:dates.get(video.id)?.published || video.published || "", image:`https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`}));
+      const latest = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
+      if (!latest.settings.enabled || !latest.channels[Core.resolveChannelRecordId(latest,id)] || latest.settings.hideShorts !== hideShorts) throw Object.assign(new Error("Feed scope changed"),{code:"STALE"});
+      const result = {videos,hideShorts,dateWarning,fetchedAt:Date.now(),limit:15};
+      if (recentFeedCache.size>=100) recentFeedCache.delete(recentFeedCache.keys().next().value);
+      recentFeedCache.set(key,result); return result;
+    } finally {clearTimeout(timer);}
+  })();
+  recentFeedPending.set(key,promise);
+  try {return await promise;} finally {recentFeedPending.delete(key);}
+}
 
 async function readFavoriteFeed(identity, force = false) {
   const current = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
@@ -17,7 +64,7 @@ async function readFavoriteFeed(identity, force = false) {
   const cached = favoriteFeedCache.get(key);
   if (!force && cached && Date.now() - cached.fetchedAt < 300000) return cached;
   if (favoriteFeedPending.has(key)) return favoriteFeedPending.get(key);
-  if (favoriteFeedPending.size >= 3) throw new Error("Feed requests busy; retry shortly");
+  if (favoriteFeedPending.size + recentFeedPending.size >= 3) throw new Error("Feed requests busy; retry shortly");
   const request = (async () => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
@@ -105,6 +152,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Already-open older frontends may finish a request during an extension update.
   if (typeof message?.type === "string" && message.type.startsWith("TUBESHELF_")) {
     message = { ...message, type: message.type.replace(/^TUBESHELF_/, "CHANLUME_") };
+  }
+  if (message?.type === "CHANLUME_CHANNEL_FEED") {
+    readRecentFeed(message.channelId,message.force===true)
+      .then(result=>sendResponse({ok:true,...result}))
+      .catch(error=>sendResponse({ok:false,error:String(error.message||error),code:error.code||(["AbortError","TimeoutError","TypeError"].includes(error.name)?"NETWORK":"PARSE")}));
+    return true;
   }
   if (message?.type === "CHANLUME_FAVORITE_FEED") {
     readFavoriteFeed(message.channelId, message.force === true)

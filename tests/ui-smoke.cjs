@@ -1,3 +1,4 @@
+const {selectScope}=require('./navigation-actions.cjs');
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playwright"));
@@ -119,31 +120,27 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     assert.equal(await guideToggle.getAttribute("aria-expanded"), "true");
     await guideToggle.click();
     assert.equal(await guide.locator(".cl-guide-list").isVisible(), false);
-    const toolbarGroups = content.locator("#chanlume-toolbar .cl-toolbar-groups");
-    assert.equal(await content.locator("#chanlume-toolbar .cl-toolbar-brand").count(), 0);
-    assert.equal(await toolbarGroups.evaluate((node) => getComputedStyle(node).flexWrap), "nowrap");
-    assert.equal(await toolbarGroups.locator(".cl-toolbar-chip").evaluateAll((chips) => chips.at(-1).offsetTop === chips[0].offsetTop), true);
-    assert.equal(await content.locator("#chanlume-toolbar").evaluate((node) => getComputedStyle(node).boxSizing), "border-box");
-    assert.equal(await content.locator("#chanlume-toolbar").evaluate((node) => getComputedStyle(node).minHeight), "52px");
+    assert.equal(await content.locator('#chanlume-toolbar').isVisible(), false);
+    assert.equal(await content.locator('[data-shelf-input=scope]').count(), 0); assert.equal(await content.locator('[data-shelf-input=view]').isVisible(),true);
+    assert.equal(await content.locator('.cl-shelf-controls').evaluate(n=>getComputedStyle(n).flexWrap), 'wrap');
     const lightTheme = await content.evaluate(() => ({
-      toolbarBackground: getComputedStyle(document.querySelector("#chanlume-toolbar")).backgroundColor,
-      toolbarText: getComputedStyle(document.querySelector("#chanlume-toolbar")).color,
-      panelBackground: getComputedStyle(document.querySelector("#chanlume-panel")).backgroundColor,
-      panelText: getComputedStyle(document.querySelector("#chanlume-panel")).color
+      toolbarBackground: getComputedStyle(document.querySelector(".cl-control-select")).backgroundColor,
+      toolbarText: getComputedStyle(document.querySelector("#chanlume-subscriptions-page")).color,
+      navigationBackground: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).backgroundColor,
+      navigationText: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).color
     }));
     await content.evaluate(() => document.documentElement.setAttribute("dark", ""));
     const darkTheme = await content.evaluate(() => ({
-      toolbarBackground: getComputedStyle(document.querySelector("#chanlume-toolbar")).backgroundColor,
-      toolbarText: getComputedStyle(document.querySelector("#chanlume-toolbar")).color,
-      panelBackground: getComputedStyle(document.querySelector("#chanlume-panel")).backgroundColor,
-      panelText: getComputedStyle(document.querySelector("#chanlume-panel")).color
+      toolbarBackground: getComputedStyle(document.querySelector(".cl-control-select")).backgroundColor,
+      toolbarText: getComputedStyle(document.querySelector("#chanlume-subscriptions-page")).color,
+      navigationBackground: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).backgroundColor,
+      navigationText: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).color
     }));
-    assert.equal(lightTheme.toolbarBackground, "rgb(242, 242, 242)");
+    assert.notEqual(lightTheme.toolbarBackground, darkTheme.toolbarBackground);
     assert.equal(lightTheme.toolbarText, "rgb(15, 15, 15)");
-    assert.equal(lightTheme.panelText, "rgb(15, 15, 15)");
-    assert.equal(darkTheme.toolbarBackground, "rgb(33, 33, 33)");
+    assert.equal(lightTheme.navigationText, "rgb(15, 15, 15)");
     assert.equal(darkTheme.toolbarText, "rgb(241, 241, 241)");
-    assert.notEqual(lightTheme.panelBackground, darkTheme.panelBackground);
+    assert.notEqual(lightTheme.navigationBackground, darkTheme.navigationBackground);
     await content.evaluate(() => document.documentElement.removeAttribute("dark"));
     const categorizedPreview = content.locator("#categorized-card .chanlume-card-classification");
     const unfiledPreview = content.locator("#unfiled-card .chanlume-card-classification");
@@ -156,10 +153,10 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     await shortsShelf.waitFor({ state: "attached" });
     assert.equal(await shortsShelf.evaluate((node) => getComputedStyle(node).display), "none");
     assert.equal(await content.locator("#regular-shelf").isVisible(), true);
-    await content.locator('#chanlume-toolbar [data-cl-group="unfiled"]').click();
+    await selectScope(content,'unfiled');
     assert.match(content.url(), /#chanlume-group=unfiled$/);
     assert.equal(await content.locator("#categorized-card").isVisible(), false);
-    assert.equal(await content.locator("#unfiled-card").isVisible(), true);
+    assert.equal(await content.locator("#unfiled-card").evaluate(el=>el.classList.contains("chanlume-hidden")), false);
 
     await content.goto("http://127.0.0.1:18766/tests/identity-scan-harness.html", { waitUntil: "networkidle" });
     await content.waitForFunction(() => globalThis.__capturedIdentities.length > 0);

@@ -6,6 +6,9 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
 const root = path.resolve(__dirname, '..');
 const launch = chromium.launch.bind(chromium);
 chromium.launch = async (...args) => {
+  if (process.env.CHANLUME_BROWSER) {
+    args[0] = { ...args[0], channel: undefined, executablePath: process.env.CHANLUME_BROWSER };
+  }
   const browser = await launch(...args);
   const route = async page => {
     await page.route('http://127.0.0.1:18766/**', async request => {
@@ -13,7 +16,7 @@ chromium.launch = async (...args) => {
       if (!file.startsWith(root + path.sep)) return request.fulfill({ status: 403, body: '' });
       try {
         const body = await fs.readFile(file);
-        const type = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png' }[path.extname(file)] || 'application/octet-stream';
+        const type = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream';
         await request.fulfill({ body, contentType: type + (type.startsWith('text/') || type.includes('javascript') ? '; charset=utf-8' : '') });
       } catch (_) { await request.fulfill({ status: 404, body: '' }); }
     });

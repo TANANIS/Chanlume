@@ -8,7 +8,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, "manifest.j
 
 test("manifest is MV3 and requests only the intended permissions", () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, "1.19.4");
+  assert.equal(manifest.version, "1.23.3");
+  assert.equal(manifest.version_name, "1.23.3 UI Preview");
   assert.deepEqual(manifest.permissions.sort(), ["storage"]);
   assert.deepEqual(manifest.host_permissions.sort(), ["https://www.googleapis.com/youtube/v3/*", "https://www.youtube.com/*"]);
 });
@@ -82,4 +83,13 @@ test("the background service worker is the only chanlumeState writer", () => {
   assert.match(backgroundJs, /Core\.applyStateOperation/);
   assert.doesNotMatch(contentJs, /chrome\.storage\.local\.set/);
   assert.doesNotMatch(dashboardJs, /chrome\.storage\.local\.set/);
+});
+
+test("YouTube surfaces bootstrap before the native page's first render", () => {
+  const isolated = manifest.content_scripts.find(entry => entry.world !== "MAIN");
+  assert.equal(isolated.run_at, "document_start");
+  assert.deepEqual(isolated.js.slice(0,2), ["content/startup.js", "content/dom.js"]);
+  assert.ok(isolated.css.includes("content/content.css"));
+  assert.ok(isolated.js.includes("content/subscriptions.js"));
+  assert.ok(!isolated.js.includes("content/recent.js"), "native subscriptions must not inject the per-channel reader");
 });
