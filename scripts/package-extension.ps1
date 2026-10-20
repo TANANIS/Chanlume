@@ -6,8 +6,8 @@ $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $source = Join-Path $projectRoot 'extension'
 $mirror = Join-Path $projectRoot 'outputs\extension'
 $version = (Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json).version
-$archivePath = Join-Path $projectRoot ("outputs\Chanlume-$version-ui-preview-20261020.zip")
-if (Test-Path -LiteralPath $archivePath) { throw "Preview already exists: $archivePath" }
+$archivePath = Join-Path $projectRoot ("outputs\Chanlume-$version.zip")
+if (Test-Path -LiteralPath $archivePath) { throw "Version package already exists: $archivePath" }
 
 $files = @(Get-ChildItem -LiteralPath $source -File -Recurse | Sort-Object FullName)
 $sourcePaths = @{}
@@ -51,7 +51,7 @@ try {
 } finally { $sha.Dispose(); $zip.Dispose() }
 
 @{
-  kind = 'local-ui-preview'
+  kind = 'versioned-package'
   version = $version
   files = $files.Count
   archive = $archivePath

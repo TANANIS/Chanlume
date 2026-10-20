@@ -15,17 +15,29 @@
 
 > 繁體中文簡介：Chanlume 是一個把 YouTube 訂閱變成「自己的書架」的 Chrome / Edge 擴充套件。你可以建立群組、直接在 YouTube 裡分類頻道、隱藏干擾內容，並使用完全在本機運作的自動分類。
 
-## Preview
+## Overview
 
 <img src="outputs/store-assets/screenshot-library-1280x800.png" alt="Chanlume subscription library with synthetic demo data" width="800">
 
-The latest **local development preview** is `outputs/Chanlume-1.23.3-ui-preview-20261020.zip`. The Subscriptions feed is the **sole video source** for Feed, Timeline and channel previews: Chanlume filters/reformats YouTube's loaded native cards, including older pages loaded by YouTube's native scrolling. 1.23.3 preserves the native grid's layout during document-start styling and **defers custom layout until YouTube has mounted its first content/continuation**. An initially empty custom view displays a localized loading state instead of incorrectly claiming there are no matching videos. **Installed signed-in Helium acceptance passed on 2026-10-20**: full reload directly into Timeline populated YouTube cards without switching to Feed, two continuation boundaries appended older videos, all 367 Timeline IDs were unique in a 506-card loaded source, Channels retained 410 synced channels, and returning to native Feed and back worked. Longer scrolling eventually loaded 2,606 native cards and 40 unique videos in the selected `生活與解壓` group. These counts reflect only the loaded portion of the feed, not all subscription history. No per-channel public-video fetch, remote server or state schema change is involved. Public/stable release remains **1.19.4**; 1.23.3 is a **development preview, not a store release**. Keep the existing unpacked extension entry and ID to preserve the local library. See `HANDOFF.md` for details.
+**Current GitHub version: 1.23.3.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
+
+The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, including a direct Timeline reload, multiple native infinite-scroll continuations, unique video IDs, full Channels directory and return to native Feed. It preserves YouTube's original subscription data flow and does not change the Home recommendation algorithm. See [technical validation](HANDOFF.md) for the exact checks and their limits.
 
 ## Download & install
 
-**[Download Chanlume 1.19.4](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.19.4.zip)**
+**[Download Chanlume 1.23.3](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.23.3.zip)** · [Source tag v1.23.3](https://github.com/TANANIS/Chanlume/tree/v1.23.3)
+
+Version 1.23.3 ZIP SHA-256: `1686a281a984f3828e2ca353a2e59ed8683c10e0d7412ed51c79f26f31ef04f2`.
 
 [Chrome Web Store listing](https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole): the published item retains its previous name until this update is submitted, approved and published.
+
+### What's new in 1.23.3
+
+- Subscriptions now offers three views: native **Feed**, chronological **Timeline**, and the complete **Channels** directory. Their video content comes from YouTube's already-loaded subscription cards and native infinite scrolling.
+- A collapsible, horizontally scrollable category rail filters the chosen view by your saved groups. The subscription tabs and category rail stay fixed while scrolling.
+- A direct Timeline reload no longer prevents YouTube's initial native feed from mounting. Unavailable cards are described as *not yet loaded*, not as proof that a channel has no uploads.
+- Chanlume's navigation and controls are integrated into YouTube's left guide; the former lower-right floating launcher and panel have been removed.
+- Live Helium checks and 76 unit plus 14 browser regression suites passed. No subscription-library reset, server, telemetry or cloud AI was introduced.
 
 ### What's new in 1.19.4
 
@@ -53,7 +65,7 @@ The local automated checks pass: 72 unit/static/background/parser tests plus sev
 
 
 
-Package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec4263894c2030ef8ac98ed1d363`.
+Historical 1.19.4 package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec4263894c2030ef8ac98ed1d363`.
 
 ### Chrome
 
@@ -61,7 +73,7 @@ The currently published extension is available from the [Chrome Web Store](https
 
 For manual installation:
 
-1. Download `Chanlume-1.19.4.zip` from the download link above.
+1. Download `Chanlume-1.23.3.zip` from the download link above.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.
@@ -91,8 +103,8 @@ Instead of replacing YouTube, Chanlume adds a lightweight organization layer dir
 
 - Create custom groups with your own names, colors, and icons.
 - Put the same channel in multiple groups.
-- Switch groups directly from YouTube's sidebar or the searchable, horizontally scrollable Subscriptions toolbar; the sidebar group list starts collapsed to save space.
-- Open the lower-right Chanlume menu anywhere on YouTube, except during video fullscreen.
+- Filter the Subscriptions Feed, Timeline and Channels views using the collapsible category rail; use the left YouTube guide for Chanlume navigation and settings.
+- Browse older subscription videos via YouTube's native infinite scrolling, without creating a separate video-history database.
 - See each stored channel's group directly beneath its video preview metadata in the Subscriptions feed.
 - Classify a channel beside the Subscribe button on channel and watch pages.
 - Pause or resume Chanlume's YouTube integration with the popup power button; your groups and preferences stay saved.
@@ -218,7 +230,7 @@ The default interface is English unless a Traditional Chinese browser locale is 
 
 ## Development and verification
 
-Local UI preview (2026-10-20): `outputs/Chanlume-1.22.2-ui-preview-20261020.zip` displays `1.22.2 UI Preview`. The signed-in browser review reproduced overflowing encoded handles, reversed disclosure arrows and distracting feed diagnostics. This candidate contains handles, improves custom video cards and moves update/progress/retry details into the toolbar ellipsis menu. Main content no longer displays fetch/source boilerplate. 78 tests and 13 browser harnesses pass. Source, unpacked mirror and all 40 ZIP entries match. Reload the existing extension entry before refreshing YouTube; installed 1.22.2 verification remains pending because browser policy blocks extension internal pages. See `work/subscriptions-ui-20261020/live-review/VALIDATION.md`.
+Versioned packaging: run `scripts/package-extension.ps1` on Windows (or `scripts/package-extension.py` with Python). The scripts produce `outputs/Chanlume-<version>.zip`, copy the source to `outputs/extension/` and verify all source/mirror/ZIP entries byte-for-byte. They refuse to overwrite an existing archive. The 1.23.3 package contains 41 matching extension files. Earlier development archives are preserved locally as historical artifacts.
 
 When Edge is unavailable, set `CHANLUME_BROWSER` to an existing Playwright Chromium executable before using `tests/local-fixture-preload.cjs`. This runs synthetic fixtures in an isolated temporary browser profile.
 

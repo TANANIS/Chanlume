@@ -1,5 +1,11 @@
 # Chanlume Handoff
 
+## Versioned 1.23.3 distribution — 2026-10-20
+
+TANA confirmed that 1.23.3 should be the current version, **not an `UI Preview` build**, and requested the README and Git tag be updated together. `extension/manifest.json` now uses `version: 1.23.3` and `version_name: 1.23.3`; `tests/manifest.test.js` asserts the clean display version. The canonical package is **`outputs/Chanlume-1.23.3.zip`** with SHA-256 **`1686a281a984f3828e2ca353a2e59ed8683c10e0d7412ed51c79f26f31ef04f2`**. Windows `scripts/package-extension.ps1` regenerated `outputs/extension` and checked all 41 source, unpacked mirror and ZIP files byte-for-byte; the Python variant has the matching stable version naming. Both packaging scripts refuse to replace an existing versioned archive. The old 1.23.3 UI Preview ZIP is kept on the user's machine as a historical archive and is no longer distributed at the repository's current version path.
+
+The README now leads with the 1.23.3 download, features and installation steps and distinguishes the separate Chrome Web Store listing; previously published 1.19.4 ZIP and user settings are untouched. The version source will be tagged **`v1.23.3`** after the packaging/tests commit, without a Chrome Web Store submission. The extensive signed-in Helium functional acceptance for 1.23.3 remains valid because this distribution changes metadata and packaging, not the feed or state logic. The following sections preserve earlier preview development and live-test history rather than describing the current release naming.
+
 ## Signed-in Helium acceptance — 1.23.3, 2026-10-20
 
 TANA manually reloaded the existing unpacked extension and asked for a live check. On the real signed-in `/feed/subscriptions#chanlume-group=生活&chanlume-view=timeline`, 1.23.3 rendered a populated Timeline immediately. A full page reload **while remaining in Timeline** also loaded 206 native `ytd-rich-item-renderer` cards, visible custom videos, and a live `ytd-continuation-item-renderer` without first switching to Feed. The stale `html.chanlume-early-custom` class was absent after initialization. Thus the 1.23.3 cold-entry failure gate from the next section **passed in the installed browser**.
@@ -128,8 +134,8 @@ Remaining gaps: native All/Feed still has a separate renderer; missing local ava
 
 
 Updated: 2026-10-20
-Current local extension version: **1.23.3 UI Preview (Chanlume)**
-Stable release version: **1.19.4**
+Current versioned extension: **1.23.3 (Chanlume)**
+Previous GitHub version: **1.19.4** (the Chrome Web Store may still carry an earlier submitted version)
 
 Historical 1.20.0 version correction: that preview identified as `1.20.0 UI Preview`; the new 22-file ZIP SHA-256 is `3673c71add3ed771897ae2ab6f544799cf79a3fa4357373bf50ec6ce3d51fdec`. All 72 unit/static/background/parser tests pass after the metadata change. This does not resolve or verify the reported unpacked-load problem.
 Current state schema: **15**
