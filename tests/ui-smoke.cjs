@@ -124,14 +124,14 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     assert.equal(await content.locator('[data-shelf-input=scope]').count(), 0); assert.equal(await content.locator('[data-shelf-input=view]').isVisible(),true);
     assert.equal(await content.locator('.cl-shelf-controls').evaluate(n=>getComputedStyle(n).flexWrap), 'wrap');
     const lightTheme = await content.evaluate(() => ({
-      toolbarBackground: getComputedStyle(document.querySelector(".cl-control-select")).backgroundColor,
+      toolbarBackground: getComputedStyle(document.querySelector(".cl-view-picker > summary")).backgroundColor,
       toolbarText: getComputedStyle(document.querySelector("#chanlume-subscriptions-page")).color,
       navigationBackground: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).backgroundColor,
       navigationText: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).color
     }));
     await content.evaluate(() => document.documentElement.setAttribute("dark", ""));
     const darkTheme = await content.evaluate(() => ({
-      toolbarBackground: getComputedStyle(document.querySelector(".cl-control-select")).backgroundColor,
+      toolbarBackground: getComputedStyle(document.querySelector(".cl-view-picker > summary")).backgroundColor,
       toolbarText: getComputedStyle(document.querySelector("#chanlume-subscriptions-page")).color,
       navigationBackground: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).backgroundColor,
       navigationText: getComputedStyle(document.querySelector("#chanlume-shelf-sticky")).color

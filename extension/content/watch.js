@@ -44,6 +44,24 @@
     // never request a separate caption track or invent missing subtitles.
     const hasNativeTranscript = () => Boolean(transcriptButton() || panelIsOpen(transcriptPanel()));
 
+    // YouTube uses more than one transcript renderer generation. Hide only
+    // the search control, never the searchable panel which owns the segments.
+    function markTranscriptSearch() {
+      const selectors = 'input[type="search"], input[placeholder*="search" i], input[placeholder*="轉錄"], input[placeholder*="字幕"], input[placeholder*="搜尋"]';
+      // YouTube can mount several old/new instances with the same target-id.
+      // Mark each search-only control, not just the first/expanded instance.
+      for (const panel of document.querySelectorAll('ytd-engagement-panel-section-list-renderer[target-id*="transcript"]')) {
+        for (const input of panel.querySelectorAll(selectors)) {
+          const wrapper = input.closest('ytd-transcript-search-box-renderer, yt-searchbox, [role="search"], #search-box, #searchbox, #search-input, #search')
+            || input.parentElement;
+          // Guard against removing the segment list with a too-broad container.
+          if (wrapper && !wrapper.querySelector('ytd-transcript-segment-renderer, ytd-transcript-segment-list-renderer')) {
+            wrapper.classList.add('cl-watch-transcript-search-control');
+          }
+        }
+      }
+    }
+
     function clearChatHeight() {
       sizedChatFrame?.style.removeProperty("--cl-watch-chat-height");
       sizedChatFrame = null;
@@ -114,6 +132,7 @@
     }
 
     function renderSidebar() {
+      markTranscriptSearch();
       const container = document.querySelector('ytd-watch-flexy:not([hidden]) #secondary #secondary-inner');
       if (!container || getState().settings.hideSecondary) {
         stopChatSizing();
@@ -197,6 +216,7 @@
       watchedMetadata = null;
       stopChatSizing();
       facts?.remove();
+      document.querySelectorAll('.cl-watch-transcript-search-control').forEach(node => node.classList.remove('cl-watch-transcript-search-control'));
       facts = null;
       sideTabs?.remove();
       sideTabs = null;
@@ -240,7 +260,7 @@
         return;
       }
 
-      if (facts && facts.parentElement !== row) { facts.remove(); facts = null; }
+      if (facts && facts.parentElement !== row.parentElement) { facts.remove(); facts = null; }
       if (!facts) {
         facts = document.createElement("div");
         facts.id = "chanlume-watch-facts";
@@ -256,8 +276,9 @@
             <span class="cl-watch-value"></span>
           </span>
         `;
-        row.insertBefore(facts, row.querySelector("#actions"));
+        row.insertAdjacentElement("afterend", facts);
       }
+      if (facts.previousElementSibling !== row) row.insertAdjacentElement("afterend", facts);
       const viewLabel = facts.querySelector(".cl-watch-views .cl-watch-value");
       const dateLabel = facts.querySelector(".cl-watch-date .cl-watch-value");
       const groupLabel = Core.translateUiText("影片資訊", getState().settings.language);

@@ -14,6 +14,10 @@
     let view = "feed", layout = "grid", query = "", collectionQuery = "", categoriesExpanded = true;
     const seenChannels = new Set();
     let collapsed = new Set(), collectionCollapsed = new Set(), channelQuery = "", sort = "source", editor = null, saving = false;
+    const closeViewOnOutside = event => {
+      const picker = root?.querySelector(".cl-view-picker[open]");
+      if (picker && !picker.contains(event.target)) picker.open = false;
+    };
     const t = (text) => Core.translateUiText(text, getState().settings.language);
     const params = () => new URLSearchParams(Core.canonicalHash(location.hash).slice(1));
     const active = () => getState().settings.enabled && location.pathname === "/feed/subscriptions" && params().get("chanlume-view") !== "favorites";
@@ -88,6 +92,7 @@
     }
 
     function clear() {
+      document.removeEventListener("pointerdown", closeViewOnOutside);
       navResizeObserver?.disconnect(); navResizeObserver = null;
       if (navResizeHandler) window.removeEventListener("resize", navResizeHandler);
       navResizeHandler = null;
@@ -351,11 +356,18 @@
         root = document.createElement("section"); root.id = "chanlume-subscriptions-page";
         root.innerHTML = '<div class="cl-shelf-header"></div><div class="cl-shelf-body"></div><dialog class="cl-collection-editor" aria-labelledby="cl-collection-editor-title"></dialog>';
         root.addEventListener("click", onClick);
+        root.addEventListener("keydown", event => {
+          if (event.key === "Escape") {
+            const picker = root.querySelector(".cl-view-picker[open]");
+            if (picker) { picker.open = false; picker.querySelector("summary")?.focus(); event.preventDefault(); }
+          }
+        });
         root.addEventListener("input", onInput);
         root.addEventListener("change", onChange);
         root.addEventListener("submit", saveEditor);
         root.querySelector("dialog").addEventListener("cancel", (event) => { if (saving) event.preventDefault(); else editor = null; });
         primary.prepend(root);
+        document.addEventListener("pointerdown", closeViewOnOutside);
         categoryScrollHandler = () => syncCategoryRail();
         window.addEventListener("scroll", categoryScrollHandler, { passive: true });
       }
@@ -410,7 +422,11 @@
           globalThis.ChanlumeDom.patch(tabsHost, tabs);
           const categories = [{id:"all",name:t("全部訂閱"),color:"#f50057",count:Object.keys(state.channels).length},{id:"unfiled",name:t("未分類"),color:"#8b8b8b",count:scopeIdsForUnfiled(state).length},...state.groups.map(g=>({id:g.id,name:g.name,color:g.color,count:g.channelIds.length}))];
           const categoryRail = collections()?"":`<div class="cl-category-rail" data-dom-key="category-rail" role="group" aria-label="${esc(t("訂閱分類"))}"><button class="cl-category-toggle" data-shelf-action="toggle-categories" aria-expanded="${categoriesExpanded}" aria-controls="cl-category-items" title="${esc(t(categoriesExpanded?"收合分類列":"展開分類列"))}" aria-label="${esc(t(categoriesExpanded?"收合分類列":"展開分類列"))}"><span aria-hidden="true">${categoriesExpanded?"‹":"›"}</span></button>${categoriesExpanded?`<button class="cl-category-scroll" data-shelf-action="category-left" title="${esc(t("向左捲動群組"))}" aria-label="${esc(t("向左捲動群組"))}">‹</button><div class="cl-category-items" id="cl-category-items" role="group" aria-label="${esc(t("訂閱分類"))}">${categories.map(item=>`<button class="cl-category-chip" type="button" data-shelf-action="scope" data-id="${esc(item.id)}" aria-pressed="${getActiveGroup()===item.id}" title="${esc(item.name)} · ${item.count}"><span class="cl-category-dot" style="background:${esc(item.color)}"></span><span class="cl-category-label" translate="no">${esc(item.name)}</span></button>`).join("")}</div><button class="cl-category-scroll" data-shelf-action="category-right" title="${esc(t("向右捲動群組"))}" aria-label="${esc(t("向右捲動群組"))}">›</button>`:`<span class="cl-category-current" translate="no">${esc(categories.find(item=>item.id===getActiveGroup())?.name||t("全部訂閱"))}</span>`}</div>`;
-          const viewControl = `<label class="cl-control-select" data-dom-key="view"><span>${esc(t("檢視方式"))}</span><select data-shelf-input="view" aria-label="${esc(t("檢視方式"))}">${option("timeline","時間軸",view)}${option("channels","依頻道",view)}${option("feed","動態",view)}</select></label>`;
+          const viewNames = { timeline: t("時間軸"), channels: t("依頻道"), feed: t("動態") };
+          // Keep the route-driven native select for compatibility with existing
+          // keyboard/programmatic clients, but replace its OS-styled popup with
+          // an accessible, consistent disclosure for sighted interaction.
+          const viewControl = `<div class="cl-view-control" data-dom-key="view"><label class="cl-visually-hidden" for="cl-view-native">${esc(t("檢視方式"))}</label><select id="cl-view-native" class="cl-visually-hidden cl-native-view-select" data-shelf-input="view" aria-hidden="true" tabindex="-1">${option("timeline","時間軸",view)}${option("channels","依頻道",view)}${option("feed","動態",view)}</select><details class="cl-view-picker"><summary aria-label="${esc(t("檢視方式"))}：${esc(viewNames[view])}"><span class="cl-view-picker-title">${esc(t("檢視方式"))}</span><strong>${esc(viewNames[view])}</strong><span class="cl-view-caret" aria-hidden="true">⌄</span></summary><div class="cl-view-options" role="group" aria-label="${esc(t("檢視方式"))}">${["timeline","channels","feed"].map(mode => `<button type="button" data-shelf-action="select-view" data-view="${mode}" aria-pressed="${mode===view}"><span>${esc(viewNames[mode])}</span><span class="cl-view-check" aria-hidden="true">${mode===view?"✓":""}</span></button>`).join("")}</div></details></div>`;
           const videoType = `<span class="cl-content-kind" title="${esc(t("目前提供影片內容"))}">${esc(t("影片"))}</span>`;
           const oldStrip = header.querySelector(".cl-category-items");
           const scrollLeft = oldStrip?.scrollLeft || 0;
@@ -419,15 +435,6 @@
           if (rail && !wiredCategoryRails.has(rail)) {
             rail.addEventListener("click", (event) => { event.stopPropagation(); onClick(event); });
             wiredCategoryRails.add(rail);
-          }
-          if (rail && !rail.querySelector(".cl-category-add")) {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.className = "cl-category-add";
-            add.dataset.shelfAction = "new";
-            add.title = add.ariaLabel = t("新增群組");
-            add.textContent = "＋";
-            rail.append(add);
           }
           const strip = header.querySelector(".cl-category-items");
           if(strip){strip.scrollLeft=scrollLeft;const selected=strip.querySelector('[aria-pressed="true"]');if(selected){const item=selected.getBoundingClientRect(),frame=strip.getBoundingClientRect();if(item.left<frame.left)strip.scrollLeft+=item.left-frame.left;else if(item.right>frame.right)strip.scrollLeft+=item.right-frame.right;}}
@@ -493,6 +500,14 @@
       const target = event.target.closest("[data-shelf-action]");
       if (!target) return;
       const action = target.dataset.shelfAction, id = target.dataset.id;
+      if (action === "select-view") {
+        const chosen = target.dataset.view;
+        if (["timeline", "channels", "feed"].includes(chosen)) {
+          root.querySelector(".cl-view-picker")?.removeAttribute("open");
+          route({"chanlume-view": chosen === "feed" ? "" : chosen, sort:""});
+        }
+        return;
+      }
       if(action === "toggle-categories") {categoriesExpanded=!categoriesExpanded;signature="";render();return;}
       if(action === "category-left" || action === "category-right") {const strip=document.querySelector('.cl-category-items');strip?.scrollBy({left:(action==="category-left"?-1:1)*Math.max(180,strip.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
       if(action === "scope") {openGroup(id);return;}

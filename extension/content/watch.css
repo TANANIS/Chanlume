@@ -2,37 +2,33 @@
 html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #top-row {
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
-}
-html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #owner {
-  order: 0;
-}
-html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #actions {
-  order: 2;
+  justify-content: space-between;
+  gap: 10px 16px;
 }
 html.chanlume-watch-layout #chanlume-watch-facts {
-  order: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
-  margin-left: auto;
+  justify-content: flex-start;
+  gap: 6px 20px;
+  margin: 8px 0 10px;
+  padding: 0 2px;
   min-width: 0;
   max-width: 100%;
   color: var(--yt-spec-text-secondary, #aaa);
-  font: 500 13px/1.5 Roboto, Arial, sans-serif;
+  font: 400 12px/1.5 Roboto, Arial, sans-serif;
 }
 #chanlume-watch-facts > span {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
 }
 #chanlume-watch-facts svg {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   flex: none;
   fill: none;
   stroke: currentColor;
@@ -82,6 +78,11 @@ html.chanlume-watch-enhanced ytd-engagement-panel-section-list-renderer[target-i
   input[placeholder*="搜尋"],
   input[type="search"]
 ) {
+  display: none !important;
+}
+/* Newer searchable transcripts have an input inside a distinct search row. */
+html.chanlume-watch-enhanced .cl-watch-transcript-search-control,
+html.chanlume-watch-enhanced ytd-transcript-search-box-renderer {
   display: none !important;
 }
 html.chanlume-watch-enhanced #chanlume-watch-side-tabs {
@@ -151,13 +152,7 @@ html.chanlume-watch-enhanced ytd-watch-flexy #related yt-thumbnail-view-model {
 html.chanlume-watch-enhanced ytd-watch-flexy ytd-watch-metadata #title h1 { letter-spacing: -.015em; }
 html.chanlume-watch-enhanced ytd-watch-flexy #description { border-radius: 15px; }
 @media (max-width: 1550px) {
-  html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #actions { order: 1; }
-  html.chanlume-watch-layout #chanlume-watch-facts {
-    order: 2;
-    flex: 1 1 100%;
-    margin-left: 0;
-    padding-block: 4px;
-  }
+  html.chanlume-watch-layout #chanlume-watch-facts { margin-top: 9px; }
 }
 @media (max-width: 1015px) {
   html.chanlume-watch-enhanced #chanlume-watch-side-tabs { margin-top: 10px; }

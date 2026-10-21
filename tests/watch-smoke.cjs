@@ -51,7 +51,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
           </div>
           <ytd-video-description-transcript-section-renderer><button id="native-transcript" aria-label="Show transcript (auto-generated captions)">Show transcript</button></ytd-video-description-transcript-section-renderer>
           <ytd-engagement-panel-section-list-renderer target-id="PAmodern_transcript_view" visibility="ENGAGEMENT_PANEL_VISIBILITY_HIDDEN"></ytd-engagement-panel-section-list-renderer>
-          <ytd-engagement-panel-section-list-renderer id="native-transcript-panel" target-id="engagement-panel-searchable-transcript" visibility="ENGAGEMENT_PANEL_VISIBILITY_HIDDEN"><ytd-transcript-search-panel-renderer><ytd-transcript-search-box-renderer><button id="search-button" aria-label="Search transcript">Search transcript</button></ytd-transcript-search-box-renderer><div id="transcript-segments"><a id="native-transcript-timestamp" href="#t=15">0:15</a><span>Native subtitle content</span></div></ytd-transcript-search-panel-renderer><button id="close-native-transcript" aria-label="Close">Close</button></ytd-engagement-panel-section-list-renderer>
+          <ytd-engagement-panel-section-list-renderer id="native-transcript-panel" target-id="engagement-panel-searchable-transcript" visibility="ENGAGEMENT_PANEL_VISIBILITY_HIDDEN"><ytd-transcript-search-panel-renderer><ytd-transcript-search-box-renderer><button id="search-button" aria-label="Search transcript">Search transcript</button><input placeholder="搜尋轉錄稿"></ytd-transcript-search-box-renderer><div class="transcript-search-new"><input id="new-transcript-search" placeholder="搜尋轉錄稿"></div><div id="transcript-segments"><a id="native-transcript-timestamp" href="#t=15">0:15</a><span>Native subtitle content</span></div></ytd-transcript-search-panel-renderer><button id="close-native-transcript" aria-label="Close">Close</button></ytd-engagement-panel-section-list-renderer>
           <ytd-live-chat-frame collapsed><div id="show-hide-button"><button id="native-chat">Show chat</button></div><div id="chatframe"></div></ytd-live-chat-frame>
         </ytd-watch-flexy>
       `);
@@ -89,6 +89,9 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
     await page.waitForFunction(() => document.querySelector('#chanlume-watch-side-tabs [data-cl-watch-panel="transcripts"]').getAttribute('aria-pressed') === 'true');
     assert.equal(await page.locator('#related').evaluate(el => getComputedStyle(el).display), 'none', 'recommendations must not appear underneath transcripts');
     assert.equal(await page.locator('#search-button').evaluate(el => getComputedStyle(el).display), 'none', 'only transcript search should be hidden');
+    assert.equal(await page.locator('ytd-transcript-search-box-renderer').evaluate(el => getComputedStyle(el).display), 'none', 'search box wrapper is hidden, not just the input');
+    await page.waitForFunction(() => document.querySelector('.transcript-search-new')?.classList.contains('cl-watch-transcript-search-control'));
+    assert.equal(await page.locator('.transcript-search-new').evaluate(el => getComputedStyle(el).display), 'none', 'new transcript input is hidden without hiding sibling segments');
     assert.notEqual(await page.locator('ytd-transcript-search-panel-renderer').first().evaluate(el => getComputedStyle(el).display), 'none', 'native transcript segment container must stay visible');
     await page.waitForFunction(() => document.querySelector('ytd-watch-flexy')?.style.getPropertyValue('--cl-watch-side-height').endsWith('px'));
     assert.equal(await page.evaluate(() => {
@@ -217,6 +220,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, "playw
       __setStoredState(next);
     });
     await page.waitForFunction(() => document.querySelector("#chanlume-watch-facts")?.getAttribute("aria-label") === "影片資訊");
+    assert.equal(await page.locator("#chanlume-watch-facts").evaluate(el => el.previousElementSibling?.id), "top-row", "view count and date have their own row, not squeezed between subscribe and action buttons");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForFunction(() => !document.querySelector('ytd-live-chat-frame')?.style.getPropertyValue('--cl-watch-chat-height'));

@@ -1,5 +1,7 @@
 # Chanlume
 
+> **2026-10-21 UI follow-up (source on main):** The left guide has consistent disclosure row sizing and no extra group-create + button. The Subscriptions category rail also has no create button; group creation remains in Collections and channel classification. Watch view/date metadata now has its own compact row below the original owner/actions controls, and transcript search controls are hidden without hiding native captions. The subscription View selector uses a styled, keyboard-accessible disclosure rather than the browser's native popup. This supersedes the earlier note below describing + buttons in the rail/sidebar; that earlier passage documents the previous implementation, not today's UI. No user library migration or additional permissions are involved.
+
 <p align="center">
   <img src="outputs/store-assets/small-promo-440x280.png" alt="Chanlume" width="440">
 </p>

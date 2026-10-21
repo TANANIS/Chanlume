@@ -1,5 +1,9 @@
 # Chanlume Handoff
 
+## Five-point UI review corrections — 2026-10-21
+
+Latest screenshot review replaced the prior sidebar/category + entry decision: remove the new-group + next to Collections and at the end of the Subscriptions category strip. Creating groups remains possible in the Collections manager or while classifying a subscribed channel. Align Collections, Subscriptions and distraction-settings disclosures to a shared 46px vertical track. Keep the native Watch owner and action controls together; render view count and date as a dedicated, left-aligned second row after #top-row. Continue to hide only transcript search widgets, not the transcript segment list, including input-based variants and duplicated old/new panels; restore native controls on power-off. Replace the native View select's visible popup with a styled details/options disclosure, retaining route semantics and keyboard Escape/outside-click behavior. The hidden select exists for compatibility with existing programmatic clients and tests. UI implementation changes are confined to content scripts/CSS and corresponding browser regressions, with no storage schema or permission changes.
+
 ## Actual Watch-page visual repair on the user's linked video — 2026-10-21 (unreleased)
 
 TANA reported layout/functional misalignment on the current signed-in page `https://www.youtube.com/watch?v=OUM6XmhViN4`. The existing Desktop browser connector owned that exact tab and allowed a real DOM/screenshot check. The native transcript and live-chat panels were expanded simultaneously even though the Chanlume Transcript tab was selected; native recommendations remained mounted below, and the native transcript list was mistakenly suppressed by CSS which hid all of `ytd-transcript-search-panel-renderer` instead of its actual nested search box. The page contained 226 native timestamped transcript segments that were invisible under that CSS rule.
