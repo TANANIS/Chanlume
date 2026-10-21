@@ -8,7 +8,6 @@ const favoriteFeedCache = new Map();
 const favoriteFeedPending = new Map();
 const recentFeedCache = new Map();
 const recentFeedPending = new Map();
-
 async function readRecentFeed(identity, force = false) {
   const state = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
   const id = Core.resolveChannelRecordId(state, identity), channel = state.channels[id];
@@ -146,6 +145,7 @@ chrome.runtime.onInstalled.addListener((details) => enqueueStateTask(async () =>
   if (details.reason === "install") {
     await chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html?view=settings"), active: true });
   }
+
 }).catch((error) => console.error("Chanlume installation setup failed", error)));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

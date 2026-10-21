@@ -25,7 +25,7 @@ This file defines the working rules for agents and maintainers changing Chanlume
 - `extension/dashboard/`: full collection and settings UI.
 - `extension/popup/`: compact extension UI.
 - `tests/`: unit, manifest, background, harness, and browser smoke coverage.
-- `outputs/extension/`: installable unpacked mirror.
+- `outputs/extension/`: installable, production-only unpacked mirror (development reload hooks excluded).
 - `outputs/Chanlume-<version>.zip`: store/release package.
 
 ## State and synchronization standard

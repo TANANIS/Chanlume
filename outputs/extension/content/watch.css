@@ -1,0 +1,159 @@
+/* Watch page, phase 1: retain YouTube's player, owner and action renderers. */
+html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #top-row {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+html.chanlume-watch-layout #chanlume-watch-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px 20px;
+  margin: 8px 0 10px;
+  padding: 0 2px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--yt-spec-text-secondary, #aaa);
+  font: 400 12px/1.5 Roboto, Arial, sans-serif;
+}
+#chanlume-watch-facts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+#chanlume-watch-facts svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#chanlume-watch-facts .cl-watch-date {
+  white-space: nowrap;
+}
+/* These two native facts remain in the DOM; only their visual duplicates
+   inside the description are hidden while accessible copies are present. */
+html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #description ytd-watch-info-text #view-count,
+html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #description ytd-watch-info-text #date-text {
+  display: none !important;
+}
+/* Some live YouTube builds use #info spans instead of the empty legacy facts. */
+html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #description ytd-watch-info-text #info > span.cl-watch-native-fact {
+  display: none !important;
+}
+html.chanlume-watch-layout ytd-watch-metadata.chanlume-watch-meta #description {
+  background: transparent !important;
+  border: 1px solid var(--yt-spec-10-percent-layer, #444);
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+/* Figma-inspired recommendations / transcript / chat switcher: uses native actions. */
+/* The YouTube transcript panel keeps its native segments/time seeking but
+   Chanlume omits its optional search affordance. Scope this to enabled
+   Chanlume Watch only so power-off restores the entire native interface. */
+html.chanlume-watch-enhanced ytd-engagement-panel-section-list-renderer[target-id*="transcript"] :is(
+  /* The search-panel renderer ALSO owns every transcript segment. Only its
+     search-box child may be hidden, or the entire transcript goes blank. */
+  ytd-transcript-search-box-renderer,
+  #search-button,
+  #search-box,
+  #searchbox,
+  #search-input,
+  yt-searchbox,
+  button[aria-label*="search" i],
+  button[aria-label*="搜尋"],
+  [aria-label*="搜尋字幕"],
+  [aria-label*="搜尋紀錄"],
+  [title*="Search transcript" i],
+  [title*="搜尋字幕"],
+  input[placeholder*="search" i],
+  input[placeholder*="搜尋"],
+  input[type="search"]
+) {
+  display: none !important;
+}
+/* Newer searchable transcripts have an input inside a distinct search row. */
+html.chanlume-watch-enhanced .cl-watch-transcript-search-control,
+html.chanlume-watch-enhanced ytd-transcript-search-box-renderer {
+  display: none !important;
+}
+html.chanlume-watch-enhanced #chanlume-watch-side-tabs {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 4px 0 18px;
+  padding: 3px;
+  display: grid;
+  grid-template-columns: repeat(var(--cl-watch-tab-count, 3), minmax(0, 1fr));
+  border: 1px solid var(--cl-line);
+  border-radius: 18px;
+  background: var(--cl-base);
+  font: 500 12px/1.25 Roboto, Arial, sans-serif;
+}
+/* Native recommended cards are the Suggestions tab's content, not an
+   always-on section underneath the transcript or live chat. Leave the
+   original nodes mounted so YouTube continuation and restoration survive. */
+html.chanlume-watch-enhanced ytd-watch-flexy:is([data-chanlume-watch-panel="transcripts"], [data-chanlume-watch-panel="chat"]) #secondary-inner > #related {
+  display: none !important;
+}
+#chanlume-watch-side-tabs > button {
+  min-width: 0;
+  padding: 10px 5px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--cl-muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#chanlume-watch-side-tabs > button[aria-pressed="true"] {
+  background: var(--cl-text);
+  color: var(--cl-base);
+  font-weight: 650;
+}
+#chanlume-watch-side-tabs > button:not([aria-pressed="true"]):hover:not(:disabled) { background: var(--cl-hover); }
+#chanlume-watch-side-tabs > button:disabled { opacity: .45; cursor: not-allowed; }
+/* Align the complete native chat region with the visible player height in
+   ordinary desktop mode. Theater, fullscreen and stacked layouts remain
+   owned by YouTube; no forced sizing in those modes. */
+@media (min-width: 1016px) {
+  html.chanlume-watch-enhanced ytd-watch-flexy:not([theater]):not([fullscreen])[data-chanlume-watch-panel="transcripts"] #secondary-inner > #panels {
+    height: var(--cl-watch-side-height, auto) !important;
+    max-height: var(--cl-watch-side-height, none) !important;
+    min-height: 0 !important;
+  }
+  html.chanlume-watch-enhanced ytd-watch-flexy:not([theater]):not([fullscreen])[data-chanlume-watch-panel="transcripts"] #secondary-inner > #panels > ytd-engagement-panel-section-list-renderer[visibility="ENGAGEMENT_PANEL_VISIBILITY_EXPANDED"] {
+    height: calc(100% - 16px) !important;
+    max-height: calc(100% - 16px) !important;
+    min-height: 0 !important;
+  }
+  html.chanlume-watch-enhanced ytd-watch-flexy:not([theater]):not([fullscreen]) ytd-live-chat-frame:not([collapsed]) {
+    height: var(--cl-watch-chat-height, auto) !important;
+    min-height: 0 !important;
+  }
+  html.chanlume-watch-enhanced ytd-watch-flexy:not([theater]):not([fullscreen]) ytd-live-chat-frame:not([collapsed]) #chatframe {
+    height: 100% !important;
+    max-height: 100%;
+  }
+}
+html.chanlume-watch-enhanced ytd-watch-flexy #related ytd-thumbnail,
+html.chanlume-watch-enhanced ytd-watch-flexy #related yt-thumbnail-view-model {
+  border-radius: 12px;
+  overflow: hidden;
+}
+html.chanlume-watch-enhanced ytd-watch-flexy ytd-watch-metadata #title h1 { letter-spacing: -.015em; }
+html.chanlume-watch-enhanced ytd-watch-flexy #description { border-radius: 15px; }
+@media (max-width: 1550px) {
+  html.chanlume-watch-layout #chanlume-watch-facts { margin-top: 9px; }
+}
+@media (max-width: 1015px) {
+  html.chanlume-watch-enhanced #chanlume-watch-side-tabs { margin-top: 10px; }
+}

@@ -13,7 +13,11 @@
     const wiredCategoryRails = new WeakSet();
     let view = "feed", layout = "grid", query = "", collectionQuery = "", categoriesExpanded = true;
     const seenChannels = new Set();
-    let collapsed = new Set(), collectionCollapsed = new Set(), channelQuery = "", sort = "source", from = "", to = "", editor = null, saving = false;
+    let collapsed = new Set(), collectionCollapsed = new Set(), channelQuery = "", sort = "source", editor = null, saving = false;
+    const closeViewOnOutside = event => {
+      const picker = root?.querySelector(".cl-view-picker[open]");
+      if (picker && !picker.contains(event.target)) picker.open = false;
+    };
     const t = (text) => Core.translateUiText(text, getState().settings.language);
     const params = () => new URLSearchParams(Core.canonicalHash(location.hash).slice(1));
     const active = () => getState().settings.enabled && location.pathname === "/feed/subscriptions" && params().get("chanlume-view") !== "favorites";
@@ -88,6 +92,7 @@
     }
 
     function clear() {
+      document.removeEventListener("pointerdown", closeViewOnOutside);
       navResizeObserver?.disconnect(); navResizeObserver = null;
       if (navResizeHandler) window.removeEventListener("resize", navResizeHandler);
       navResizeHandler = null;
@@ -142,18 +147,36 @@
       render();
     }
     function navigateCollections() { route({"chanlume-view":"collections"}); }
+    function navigateNewGroup() {
+      if (location.pathname !== "/feed/subscriptions") {
+        // The sidebar is also present on channel and Watch pages. Carry only
+        // an ephemeral UI intent in the route, never in the saved library.
+        location.assign("https://www.youtube.com/feed/subscriptions#chanlume-view=collections&chanlume-create-group=1");
+        return;
+      }
+      navigateCollections();
+      openEditor(null, "group");
+    }
     function navigateChannels() { route({"chanlume-view":"channels", "chanlume-group":"all"}); }
     function readRoute() {
       const p = params(), requested = p.get("chanlume-view");
       view = ["channels", "timeline"].includes(requested) ? requested : "feed";
       layout = p.get("layout") === "list" || (view === "channels" && p.get("layout") !== "grid") ? "list" : "grid";
-      sort = ["name", "newest", "oldest"].includes(p.get("sort")) ? p.get("sort") : "source";
-      if (view === "timeline" && sort === "source") sort = "newest";
+      // Video order is automatic. The only remaining manual sort is the
+      // channel/group directory name order.
+      sort = p.get("sort") === "name" && (view === "channels" || collections()) ? "name" : "source";
       query = p.get("q") || ""; channelQuery = p.get("channel-q") || "";
-      from = /^\d{4}-\d{2}-\d{2}$/.test(p.get("from") || "") ? p.get("from") : "";
-      to = /^\d{4}-\d{2}-\d{2}$/.test(p.get("to") || "") ? p.get("to") : "";
+      // Remove retired date/sort parameters from previously saved page links.
+      const url = new URL(location.href), clean = new URLSearchParams(url.hash.slice(1));
+      const before = clean.toString();
+      clean.delete("from"); clean.delete("to");
+      if (sort !== "name") clean.delete("sort");
+      if (clean.toString() !== before) {
+        url.hash = clean.toString();
+        history.replaceState(history.state, "", url);
+      }
       if (collectionFeed()) {
-        view="feed"; layout="grid"; query=""; channelQuery=""; sort="newest"; from=""; to="";
+        view="feed"; layout="grid"; query=""; channelQuery=""; sort="source";
       }
     }
     const exactDate = (card) => {
@@ -280,7 +303,7 @@
         (shelf.closest("ytd-rich-section-renderer") || shelf).classList.toggle("chanlume-relevant-hidden", /^(最相關|最相关|Most relevant)$/i.test(title));
       }
       prepareChannels();
-      const custom = collections() || collectionFeed() || view !== "feed" || layout === "list" || sort !== "source" || Boolean(from || to);
+      const custom = collections() || collectionFeed() || view !== "feed" || layout === "list";
       const nativeReady = !custom || collections() || nativeFeedReady(root.parentElement);
       const showCustom = custom && nativeReady;
       root.parentElement.classList.toggle("chanlume-shelf-custom", showCustom);
@@ -292,17 +315,17 @@
         card.classList.toggle("cl-shelf-search-hidden", Boolean(query) && !card.textContent.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
       }
       const source = custom && !collections() ? snapshot() : [];
-      const videos = view === "channels" ? source : source.filter(v => (!from && !to) || (v.date && (!from || v.date >= from) && (!to || v.date <= to)));
+      const videos = source;
       if (view === "timeline") {
         // Relative ages are approximate; keep native order for ties and leave
         // unknown ages last in both directions.
         videos.sort((a, b) => {
           if (a.ageSeconds == null) return b.ageSeconds == null ? 0 : 1;
           if (b.ageSeconds == null) return -1;
-          return (a.ageSeconds - b.ageSeconds) * (sort === "oldest" ? -1 : 1);
+          return a.ageSeconds - b.ageSeconds;
         });
-      } else if (sort === "oldest") videos.reverse();
-      const next = JSON.stringify([collections(), nativeReady, getState().revision, getState().settings.language, getActiveGroup(), source, query, channelQuery, collectionQuery, [...collapsed], [...collectionCollapsed], layout, view, sort, from, to]);
+      }
+      const next = JSON.stringify([collections(), nativeReady, getState().revision, getState().settings.language, getActiveGroup(), source, query, channelQuery, collectionQuery, [...collapsed], [...collectionCollapsed], layout, view, sort]);
       if (next === bodySignature) return; bodySignature = next;
       const area = root.querySelector(".cl-shelf-body");
       const patchBody = markup => globalThis.ChanlumeDom.patch(area, markup);
@@ -333,11 +356,18 @@
         root = document.createElement("section"); root.id = "chanlume-subscriptions-page";
         root.innerHTML = '<div class="cl-shelf-header"></div><div class="cl-shelf-body"></div><dialog class="cl-collection-editor" aria-labelledby="cl-collection-editor-title"></dialog>';
         root.addEventListener("click", onClick);
+        root.addEventListener("keydown", event => {
+          if (event.key === "Escape") {
+            const picker = root.querySelector(".cl-view-picker[open]");
+            if (picker) { picker.open = false; picker.querySelector("summary")?.focus(); event.preventDefault(); }
+          }
+        });
         root.addEventListener("input", onInput);
         root.addEventListener("change", onChange);
         root.addEventListener("submit", saveEditor);
         root.querySelector("dialog").addEventListener("cancel", (event) => { if (saving) event.preventDefault(); else editor = null; });
         primary.prepend(root);
+        document.addEventListener("pointerdown", closeViewOnOutside);
         categoryScrollHandler = () => syncCategoryRail();
         window.addEventListener("scroll", categoryScrollHandler, { passive: true });
       }
@@ -365,11 +395,10 @@
         }
       }
       prepareChannels();
-      const dated=getCards().some(card=>exactDate(card));
       const state = getState(), group = state.groups.find((item) => item.id === getActiveGroup());
       const feedMenuMarkup = "";
       root.dataset.page = collectionFeed() ? "collection-feed" : collections() ? "collections" : view === "channels" ? "channels" : "subscriptions";
-      const next = JSON.stringify([state.revision, state.settings.language, getActiveGroup(), collections(), collectionFeed(), categoriesExpanded, view, layout, sort, query, channelQuery, collectionQuery, from, to, dated]);
+      const next = JSON.stringify([state.revision, state.settings.language, getActiveGroup(), collections(), collectionFeed(), categoriesExpanded, view, layout, sort, query, channelQuery, collectionQuery]);
       if (next !== signature) {
         signature = next;
         restoreCategoryRail();
@@ -380,7 +409,6 @@
         const searchLabel = collections() ? "搜尋群組與成員" : view === "channels" ? "搜尋訂閱頻道" : "搜尋已載入的影片";
         const search = `<label class="cl-shelf-search" data-dom-key="search">${icon("search")}<input type="search" data-shelf-input="${collections()?"collections":view==="channels"?"channels":"videos"}" value="${esc(collections()?collectionQuery:view==="channels"?channelQuery:query)}" placeholder="${esc(t(searchLabel))}" aria-label="${esc(t(searchLabel))}"></label>`;
         const sortSelect = `<label class="cl-control-select" data-dom-key="sort"><span>${esc(t("排序"))}</span><select data-shelf-input="sort" aria-label="${esc(t("排序"))}">${collections()?option("source","自訂順序",sort)+option("name","群組名稱",sort):option("source","名冊順序",sort)+option("name","頻道名稱",sort)}</select></label>`;
-        const dateControl = !dated ? `<button class="cl-button" disabled title="${esc(t("取得發布日期後可用"))}">${esc(t("日期範圍"))}</button>` : `<details class="cl-date-filter" data-dom-key="date-filter"><summary>${esc(t("日期範圍"))}${from||to?" •":""}</summary><div><label>${esc(t("起始日期"))}<input type="date" data-shelf-input="from" value="${from}" max="${to||"9999-12-31"}"></label><label>${esc(t("結束日期"))}<input type="date" data-shelf-input="to" value="${to}" min="${from||"0001-01-01"}"></label>${button("clear-dates","清除日期")}</div></details>`;
         const tools = `<div class="cl-feed-tools-slot" data-dom-key="feed-tools">${feedMenuMarkup}</div>`;
         if (collectionFeed()) {
           tabsHost.hidden = true;
@@ -394,12 +422,15 @@
           globalThis.ChanlumeDom.patch(tabsHost, tabs);
           const categories = [{id:"all",name:t("全部訂閱"),color:"#f50057",count:Object.keys(state.channels).length},{id:"unfiled",name:t("未分類"),color:"#8b8b8b",count:scopeIdsForUnfiled(state).length},...state.groups.map(g=>({id:g.id,name:g.name,color:g.color,count:g.channelIds.length}))];
           const categoryRail = collections()?"":`<div class="cl-category-rail" data-dom-key="category-rail" role="group" aria-label="${esc(t("訂閱分類"))}"><button class="cl-category-toggle" data-shelf-action="toggle-categories" aria-expanded="${categoriesExpanded}" aria-controls="cl-category-items" title="${esc(t(categoriesExpanded?"收合分類列":"展開分類列"))}" aria-label="${esc(t(categoriesExpanded?"收合分類列":"展開分類列"))}"><span aria-hidden="true">${categoriesExpanded?"‹":"›"}</span></button>${categoriesExpanded?`<button class="cl-category-scroll" data-shelf-action="category-left" title="${esc(t("向左捲動群組"))}" aria-label="${esc(t("向左捲動群組"))}">‹</button><div class="cl-category-items" id="cl-category-items" role="group" aria-label="${esc(t("訂閱分類"))}">${categories.map(item=>`<button class="cl-category-chip" type="button" data-shelf-action="scope" data-id="${esc(item.id)}" aria-pressed="${getActiveGroup()===item.id}" title="${esc(item.name)} · ${item.count}"><span class="cl-category-dot" style="background:${esc(item.color)}"></span><span class="cl-category-label" translate="no">${esc(item.name)}</span></button>`).join("")}</div><button class="cl-category-scroll" data-shelf-action="category-right" title="${esc(t("向右捲動群組"))}" aria-label="${esc(t("向右捲動群組"))}">›</button>`:`<span class="cl-category-current" translate="no">${esc(categories.find(item=>item.id===getActiveGroup())?.name||t("全部訂閱"))}</span>`}</div>`;
-          const viewControl = `<label class="cl-control-select" data-dom-key="view"><span>${esc(t("檢視方式"))}</span><select data-shelf-input="view" aria-label="${esc(t("檢視方式"))}">${option("timeline","時間軸",view)}${option("channels","依頻道",view)}${option("feed","動態",view)}</select></label>`;
+          const viewNames = { timeline: t("時間軸"), channels: t("依頻道"), feed: t("動態") };
+          // Keep the route-driven native select for compatibility with existing
+          // keyboard/programmatic clients, but replace its OS-styled popup with
+          // an accessible, consistent disclosure for sighted interaction.
+          const viewControl = `<div class="cl-view-control" data-dom-key="view"><label class="cl-visually-hidden" for="cl-view-native">${esc(t("檢視方式"))}</label><select id="cl-view-native" class="cl-visually-hidden cl-native-view-select" data-shelf-input="view" aria-hidden="true" tabindex="-1">${option("timeline","時間軸",view)}${option("channels","依頻道",view)}${option("feed","動態",view)}</select><details class="cl-view-picker"><summary aria-label="${esc(t("檢視方式"))}：${esc(viewNames[view])}"><span class="cl-view-picker-title">${esc(t("檢視方式"))}</span><strong>${esc(viewNames[view])}</strong><span class="cl-view-caret" aria-hidden="true">⌄</span></summary><div class="cl-view-options" role="group" aria-label="${esc(t("檢視方式"))}">${["timeline","channels","feed"].map(mode => `<button type="button" data-shelf-action="select-view" data-view="${mode}" aria-pressed="${mode===view}"><span>${esc(viewNames[mode])}</span><span class="cl-view-check" aria-hidden="true">${mode===view?"✓":""}</span></button>`).join("")}</div></details></div>`;
           const videoType = `<span class="cl-content-kind" title="${esc(t("目前提供影片內容"))}">${esc(t("影片"))}</span>`;
-          const dateSort = `<div class="cl-time-sort" data-dom-key="time-sort" role="group" aria-label="${esc(t("排序"))}">${button("sort-newest","最新日期",`aria-pressed="${sort!=="oldest"}"`)}${button("sort-oldest","最舊日期",`aria-pressed="${sort==="oldest"}"`)}</div>`;
           const oldStrip = header.querySelector(".cl-category-items");
           const scrollLeft = oldStrip?.scrollLeft || 0;
-          globalThis.ChanlumeDom.patch(header, `<h1 class="cl-visually-hidden">${esc(t(collections()?"群組收藏":getActiveGroup()==="unfiled"?"未分類":group?.name||"全部訂閱"))}</h1><div class="cl-shelf-controls" data-dom-key="shelf-controls">${collections()?sortSelect+layoutControl+`<div class="cl-create-collection">${button("new","新增群組")}</div>`:viewControl+videoType+(view==="channels"?sortSelect:dateSort+dateControl)+layoutControl+tools}${search}</div>${categoryRail?`<div id="chanlume-category-slot" data-dom-key="category-slot">${categoryRail}</div>`:""}`);
+          globalThis.ChanlumeDom.patch(header, `<h1 class="cl-visually-hidden">${esc(t(collections()?"群組收藏":getActiveGroup()==="unfiled"?"未分類":group?.name||"全部訂閱"))}</h1><div class="cl-shelf-controls" data-dom-key="shelf-controls">${collections()?sortSelect+layoutControl+`<div class="cl-create-collection">${button("new","新增群組")}</div>`:viewControl+videoType+(view==="channels"?sortSelect:"")+layoutControl+tools}${search}</div>${categoryRail?`<div id="chanlume-category-slot" data-dom-key="category-slot">${categoryRail}</div>`:""}`);
           const rail = header.querySelector(".cl-category-rail");
           if (rail && !wiredCategoryRails.has(rail)) {
             rail.addEventListener("click", (event) => { event.stopPropagation(); onClick(event); });
@@ -414,6 +445,13 @@
       navResizeHandler?.();
       syncCategoryRail();
       update();
+      if (collections() && params().get("chanlume-create-group") === "1") {
+        const url = new URL(location.href), clean = new URLSearchParams(url.hash.slice(1));
+        clean.delete("chanlume-create-group");
+        url.hash = clean.toString();
+        history.replaceState(history.state, "", url);
+        openEditor(null, "group");
+      }
     }
 
     function openEditor(id, kind) {
@@ -455,13 +493,21 @@
       const type = event.target.dataset.shelfInput;
       if (type === "scope") { openGroup(event.target.value); return; }
       if (type === "view") { route({"chanlume-view": event.target.value === "feed" ? "" : event.target.value, sort:""}); return; }
-      if (["sort","from","to"].includes(type)) { route({[type]:event.target.value},true); return; }
+      if (type === "sort") { route({sort:event.target.value},true); return; }
       if (editor && event.target.dataset.shelfMember) editor.changes.set(event.target.dataset.shelfMember, event.target.checked);
     }
     function onClick(event) {
       const target = event.target.closest("[data-shelf-action]");
       if (!target) return;
       const action = target.dataset.shelfAction, id = target.dataset.id;
+      if (action === "select-view") {
+        const chosen = target.dataset.view;
+        if (["timeline", "channels", "feed"].includes(chosen)) {
+          root.querySelector(".cl-view-picker")?.removeAttribute("open");
+          route({"chanlume-view": chosen === "feed" ? "" : chosen, sort:""});
+        }
+        return;
+      }
       if(action === "toggle-categories") {categoriesExpanded=!categoriesExpanded;signature="";render();return;}
       if(action === "category-left" || action === "category-right") {const strip=document.querySelector('.cl-category-items');strip?.scrollBy({left:(action==="category-left"?-1:1)*Math.max(180,strip.clientWidth*.7),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});return;}
       if(action === "scope") {openGroup(id);return;}
@@ -469,15 +515,13 @@
       if (action === "collections") navigateCollections();
       if (action === "subscriptions") openGroup("all");
       if (action === "directory") navigateChannels();
-      if (action === "clear-dates") route({from:"",to:""},true);
       if (action === "open") { openGroup(id); route({"chanlume-view":"collection", q:"", "channel-q":""}, true); }
-      if (action === "feed" || action === "channels") route({"chanlume-view":action === "feed" ? "" : action, ...(action === "feed" ? {layout:"", sort:"", from:"", to:"", q:""} : {})});
-      if (action === "sort-newest" || action === "sort-oldest") route({sort:action==="sort-newest"?"newest":"oldest"},true);
+      if (action === "feed" || action === "channels") route({"chanlume-view":action === "feed" ? "" : action, ...(action === "feed" ? {layout:"", sort:"", q:""} : {})});
       if (action === "grid" || action === "list") route({layout:action === "grid" ? (view === "channels" ? "grid" : "") : action});
       if (action === "collapse-collection") { if (collectionCollapsed.has(id)) collectionCollapsed.delete(id); else collectionCollapsed.add(id); update(); }
       if (action === "new" || action === "rename" || action === "members") openEditor(id, action === "members" ? "members" : "group");
       if (action === "collapse") { if (collapsed.has(id)) collapsed.delete(id); else collapsed.add(id); update(); }
     }
-    return { render, update, clear, navigateCollections, navigateChannels, isCollections: collections };
+    return { render, update, clear, navigateCollections, navigateNewGroup, navigateChannels, isCollections: collections };
   };
 })();

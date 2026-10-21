@@ -59,6 +59,8 @@ html[dark] {
 #chanlume-guide-section.cl-collapsed .cl-guide-list { display: none; }
 
 .cl-guide-heading button:hover { color: var(--cl-text); background: var(--cl-hover); }
+.cl-guide-heading .cl-nav-collection-link { min-width: 0; }
+.cl-guide-heading button:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: 2px; }
 .cl-guide-list { display: grid; gap: 2px; }
 .cl-favorite-entry { padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px solid var(--cl-line); }
 .chanlume-favorites-primary > :not(#chanlume-favorites-page) { display: none !important; }
@@ -201,9 +203,9 @@ html[dark] {
 .cl-toast { position: fixed; left: 50%; bottom: 26px; z-index: 2210; padding: 11px 16px; border: 1px solid var(--cl-line); border-radius: 12px; color: var(--cl-text); background: var(--cl-raised); box-shadow: 0 10px 36px rgba(0,0,0,.28); font: 600 13px/1.3 Roboto, Arial, sans-serif; transform: translate(-50%, 18px); opacity: 0; transition: 160ms ease; pointer-events: none; }
 .cl-toast.cl-show { opacity: 1; transform: translate(-50%, 0); }
 #chanlume-channel-control { position: relative; align-self: center; flex: 0 0 auto; margin-left: 8px; font-family: Roboto, Arial, sans-serif; }
-.cl-current-trigger { min-height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--cl-line); border-radius: 18px; color: var(--cl-text); background: rgba(124,92,255,.18); font: 600 14px/1 Roboto, Arial, sans-serif; cursor: pointer; }
+.cl-current-trigger { min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--cl-line); border-radius: 999px; color: var(--cl-text); background: var(--cl-soft); font: 600 13px/1 Roboto, Arial, sans-serif; cursor: pointer; }
 .cl-current-trigger:hover, #chanlume-channel-control.cl-current-open .cl-current-trigger { background: rgba(124,92,255,.3); }
-.cl-current-favorite { margin-left: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--cl-line); border-radius: 18px; color: var(--cl-text); background: var(--cl-surface); font: 600 14px/1 Roboto, Arial, sans-serif; cursor: pointer; }
+.cl-current-favorite { margin-left: 6px; min-height: 38px; padding: 0 14px; border: 1px solid var(--cl-line); border-radius: 999px; color: var(--cl-text); background: var(--cl-surface); font: 600 13px/1 Roboto, Arial, sans-serif; cursor: pointer; }
 .cl-current-favorite[aria-pressed="true"] { background: var(--cl-soft); color: var(--cl-accent); }
 .cl-current-favorite:disabled { opacity: .6; cursor: wait; }
 .cl-current-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 2202; width: 270px; max-height: min(440px, 65vh); box-sizing: border-box; padding: 14px; display: none; overflow-y: auto; border: 1px solid var(--cl-line); border-radius: 16px; color: var(--cl-text); background: var(--cl-raised); box-shadow: 0 16px 48px rgba(0,0,0,.28); }
@@ -221,6 +223,17 @@ html[dark] {
 .cl-current-empty { display: block; padding: 8px; color: var(--cl-muted); font-size: 12px; }
 .cl-current-menu > button { width: 100%; margin-top: 10px; padding: 10px; border: 0; border-top: 1px solid var(--cl-line); color: #8064ed; background: transparent; font: 600 12px/1 Roboto, Arial, sans-serif; cursor: pointer; }
 .cl-current-menu > button:hover { color: var(--cl-text); }
+.cl-current-new-form { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--cl-line); border-radius: 12px; background: var(--cl-soft); }
+.cl-current-new-form[hidden] { display: none; }
+.cl-current-new-form label { display: flex; flex-direction: column; align-items: stretch; gap: 5px; color: var(--cl-muted); font-size: 12px; }
+.cl-current-new-form input[name="name"] { box-sizing: border-box; width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid var(--cl-line); border-radius: 8px; background: var(--cl-raised); color: var(--cl-text); font: 13px Roboto, Arial, sans-serif; }
+.cl-current-new-form input[type="color"] { width: 48px; height: 30px; padding: 2px; border: 1px solid var(--cl-line); border-radius: 8px; background: var(--cl-raised); cursor: pointer; }
+.cl-current-form-error { margin: 0; color: var(--cl-accent); font-size: 12px; }
+.cl-current-form-error:empty { display: none; }
+.cl-current-form-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.cl-current-form-actions button { padding: 8px 10px; border: 1px solid var(--cl-line); border-radius: 9px; background: var(--cl-raised); color: var(--cl-text); cursor: pointer; font: 600 12px Roboto, Arial, sans-serif; }
+.cl-current-form-actions .cl-current-create-submit { background: var(--cl-accent); color: #fff; border-color: transparent; }
+.cl-current-menu button:focus-visible, .cl-current-menu input:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: 2px; }
 #chanlume-channel-classification, .chanlume-card-classification { margin-top: 7px; display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--cl-muted); font: 500 12px/1.4 Roboto, Arial, sans-serif; }
 .chanlume-card-classification { margin-top: 4px; gap: 5px; }
 .chanlume-card-classification .cl-channel-classification-label { font-size: 11px; }
@@ -279,13 +292,20 @@ html.chanlume-navigation-active ytd-guide-renderer #footer { display: none !impo
 #chanlume-guide-section .cl-nav-subscriptions { padding: 4px 0 12px; border-bottom: 1px solid var(--cl-line); }
 #chanlume-guide-section .cl-nav-heading { display: flex; align-items: center; }
 #chanlume-guide-section .cl-nav-disclosure { background: transparent; color: var(--cl-text); border: 0; border-radius: 8px; width: 28px; height: 32px; flex-shrink: 0; cursor: pointer; }
+/* All disclosure rows share a 46px track and aligned right-edge toggles. */
+#chanlume-guide-section .cl-guide-heading,
+#chanlume-guide-section .cl-nav-heading { min-height: 46px; height: 46px; box-sizing: border-box; }
+#chanlume-guide-section .cl-guide-heading .cl-guide-toggle,
+#chanlume-guide-section .cl-nav-disclosure { display: grid; place-items: center; width: 36px; height: 40px; flex: 0 0 36px; margin-right: 4px; }
+#chanlume-guide-section .cl-nav-subscriptions .cl-nav-heading > .cl-guide-item { flex: 1 1 auto; min-width: 0; }
+#chanlume-guide-section .cl-guide-heading .cl-nav-collection-link { padding-left: 13px; flex: 1 1 auto; }
 #chanlume-guide-section .cl-nav-child { padding-left: 54px; grid-template-columns: minmax(0,1fr) auto; }
 #chanlume-guide-section [hidden] { display: none !important; }
 #chanlume-guide-section [aria-current=page], #chanlume-mini-guide [aria-current=page] { background: var(--cl-hover); font-weight: 600; }
 #chanlume-guide-section .cl-nav-settings { border-bottom: 0; }
 #chanlume-guide-section .cl-nav-settings > div { padding: 4px 0 8px; }
 #chanlume-guide-section .cl-nav-distractions { margin-top: 9px; border-top: 1px solid var(--cl-line); }
-#chanlume-guide-section .cl-nav-distractions > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 42px; box-sizing: border-box; padding: 9px 12px 9px 50px; list-style: none; color: var(--cl-text); font: 400 14px/1.4 Roboto, Arial, sans-serif; border-radius: 8px; cursor: pointer; }
+#chanlume-guide-section .cl-nav-distractions > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px; box-sizing: border-box; padding: 9px 12px 9px 50px; list-style: none; color: var(--cl-text); font: 400 14px/1.4 Roboto, Arial, sans-serif; border-radius: 8px; cursor: pointer; }
 #chanlume-guide-section .cl-nav-distractions > summary::-webkit-details-marker { display: none; }
 #chanlume-guide-section .cl-nav-distractions > summary:hover { background: var(--cl-hover); }
 #chanlume-guide-section .cl-nav-chevron { color: var(--cl-muted); transition: transform 160ms ease; }
@@ -301,6 +321,182 @@ html.chanlume-navigation-active ytd-guide-renderer #footer { display: none !impo
 #chanlume-guide-section .cl-nav-support:hover { background: var(--cl-hover); }
 #chanlume-guide-section .cl-nav-support > span:first-child { color: #e5b85c; }
 #chanlume-guide-section .cl-nav-switch:focus-visible, #chanlume-guide-section .cl-nav-support:focus-visible, #chanlume-guide-section .cl-nav-distractions > summary:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: 2px; }
+
+/* One navigation-row system: native guide scrolls the list, while Chanlume
+   remains docked at the bottom. All four disclosure arrows use the same SVG. */
+html.chanlume-navigation-active ytd-guide-renderer,
+html.chanlume-navigation-active ytd-guide-renderer #sections,
+html.chanlume-navigation-active ytd-guide-renderer #chanlume-guide-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+html.chanlume-navigation-active ytd-guide-renderer {
+  /* Native drawer begins underneath the masthead, not at viewport y=0. */
+  height: calc(100dvh - var(--cl-guide-top, 56px));
+}
+html.chanlume-navigation-active #guide-inner-content:has(#chanlume-guide-section) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+#chanlume-guide-section {
+  --cl-nav-row: 46px;
+  --cl-nav-arrow-hit: 36px;
+  --cl-nav-icon: 24px;
+  --cl-nav-radius: 9px;
+  padding: 0;
+}
+#chanlume-guide-section > .cl-nav-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+#chanlume-guide-section .cl-nav-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cl-line) transparent;
+}
+#chanlume-guide-section .cl-nav-footer {
+  position: relative;
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 6px 0;
+  border-top: 1px solid var(--cl-line);
+  background: var(--cl-base);
+  z-index: 2;
+}
+#chanlume-guide-section .cl-guide-heading,
+#chanlume-guide-section .cl-nav-heading,
+#chanlume-guide-section .cl-nav-settings > summary,
+#chanlume-guide-section .cl-nav-distractions > summary {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--cl-nav-row);
+  min-height: var(--cl-nav-row);
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  border-radius: var(--cl-nav-radius);
+  font: 500 14px/1.4 Roboto, Arial, sans-serif;
+}
+#chanlume-guide-section .cl-guide-heading .cl-nav-collection-link,
+#chanlume-guide-section .cl-nav-heading > .cl-guide-item {
+  box-sizing: border-box;
+  height: var(--cl-nav-row);
+  min-height: var(--cl-nav-row);
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0 10px;
+  gap: 14px;
+  font: inherit;
+  border-radius: var(--cl-nav-radius);
+}
+#chanlume-guide-section .cl-guide-heading .cl-nav-collection-link {
+  display: flex;
+  align-items: center;
+}
+#chanlume-guide-section .cl-guide-heading .cl-nav-collection-link > .cl-design-icon,
+#chanlume-guide-section .cl-nav-settings > summary > .cl-design-icon {
+  flex: 0 0 var(--cl-nav-icon);
+  width: var(--cl-nav-icon);
+  height: var(--cl-nav-icon);
+}
+#chanlume-guide-section .cl-guide-heading .cl-guide-toggle,
+#chanlume-guide-section .cl-nav-disclosure,
+#chanlume-guide-section .cl-nav-settings > summary > .cl-nav-chevron,
+#chanlume-guide-section .cl-nav-distractions > summary > .cl-nav-chevron {
+  flex: 0 0 var(--cl-nav-arrow-hit);
+  width: var(--cl-nav-arrow-hit);
+  height: var(--cl-nav-arrow-hit);
+  min-width: var(--cl-nav-arrow-hit);
+  box-sizing: border-box;
+  margin: 0 4px 0 0;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--cl-nav-radius);
+  background: transparent;
+  color: var(--cl-muted);
+}
+#chanlume-guide-section .cl-guide-heading .cl-guide-toggle,
+#chanlume-guide-section .cl-nav-disclosure {
+  display: grid;
+  place-items: center;
+}
+#chanlume-guide-section .cl-nav-chevron {
+  display: block;
+  box-sizing: border-box;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 150ms ease;
+}
+#chanlume-guide-section .cl-guide-toggle > .cl-nav-chevron,
+#chanlume-guide-section .cl-nav-disclosure > .cl-nav-chevron { width: 16px; height: 16px; padding: 0; margin: 0; }
+#chanlume-guide-section .cl-guide-toggle[aria-expanded="true"] > .cl-nav-chevron,
+#chanlume-guide-section .cl-nav-disclosure[aria-expanded="true"] > .cl-nav-chevron,
+#chanlume-guide-section .cl-nav-distractions[open] > summary > .cl-nav-chevron,
+#chanlume-guide-section .cl-nav-settings[open] > summary > .cl-nav-chevron {
+  transform: rotate(180deg);
+}
+#chanlume-guide-section .cl-nav-settings { margin: 0; position: relative; }
+#chanlume-guide-section .cl-nav-settings[open] {
+  display: flex;
+  flex-direction: column-reverse;
+}
+#chanlume-guide-section .cl-nav-settings > summary {
+  cursor: pointer;
+  padding-left: 10px;
+  gap: 14px;
+  color: var(--cl-text);
+  list-style: none;
+}
+#chanlume-guide-section .cl-nav-settings > summary > span:not(.cl-nav-chevron) { flex: 1 1 auto; }
+#chanlume-guide-section .cl-nav-settings > summary > .cl-nav-chevron { margin-left: auto; }
+#chanlume-guide-section .cl-nav-settings > summary:hover,
+#chanlume-guide-section .cl-nav-distractions > summary:hover { background: var(--cl-hover); }
+#chanlume-guide-section .cl-nav-settings[open] > div {
+  position: static;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: max(120px, calc(100dvh - var(--cl-guide-top, 56px) - 190px));
+  padding: 8px 5px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--cl-line);
+  border-radius: 12px;
+  background: var(--cl-base);
+  box-shadow: 0 -8px 24px #0002;
+}
+#chanlume-guide-section .cl-nav-distractions { margin-top: 4px; }
+#chanlume-guide-section .cl-nav-distractions > summary {
+  color: var(--cl-text);
+  padding-left: 45px;
+  justify-content: space-between;
+}
+#chanlume-guide-section .cl-nav-distractions > summary > span:first-child { flex: 1 1 auto; min-width: 0; }
+#chanlume-guide-section .cl-nav-distractions > summary > .cl-nav-chevron { margin-left: auto; }
+#chanlume-guide-section .cl-nav-settings > summary:focus-visible,
+#chanlume-guide-section .cl-guide-toggle:focus-visible,
+#chanlume-guide-section .cl-nav-disclosure:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: -2px; }
 #chanlume-mini-guide { display: grid; padding: 4px; gap: 4px; color: var(--cl-text); }
 #chanlume-mini-guide .cl-guide-item { display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 10px 2px; height: auto; min-height: 68px; box-sizing: border-box; text-decoration: none; }
 #chanlume-mini-guide .cl-guide-dot { width: 24px; height: 24px; }

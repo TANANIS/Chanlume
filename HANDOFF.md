@@ -1,5 +1,11 @@
 # Chanlume Handoff
 
+## GitHub 1.24.0 release and Chrome Web Store boundary — 2026-10-21
+
+The author asked to package/push Chanlume and publish through the existing Chrome Web Store Developer Console item `agnnbehkdkdkflknblhkmgciaekngole`. The Desktop browser integration refused the gallery as **not scriptable**, so Store upload, submission, approval and publication are **not** claimed. Release 1.24.0 contains the Home/Watch/channel/sidebar UI changes and preserves existing user storage, subscription IDs and the immutable `v1.23.3` tag/ZIP. The production packagers now strip `dev-reload.json`, `content/dev-reload.js` and the development-only background reload handlers, while retaining the development workflow in the tracked unpacked source. The Store item must be updated manually using the versioned ZIP once the GitHub release has been verified.
+
+Production packaging proof: `outputs/Chanlume-1.24.0.zip` contains 45 entries, SHA-256 `71212c6cef1756b95e02e6c1a6e6656a6daacabf6515e598f4e3f15ba4cca325`. The production mirror and ZIP contents were compared byte-for-byte; no development marker/script/handler is included. The historical 1.23.3 ZIP hash is unchanged. After packaging, source unit tests were 87/87 PASS and 16/16 browser fixtures PASS. These do not substitute for Google Chrome Web Store review.
+
 ## Unified guide rows, bottom settings, and native hover reveal — 2026-10-21
 
 Screenshot review exposed four inconsistent disclosure arrows and a Collections row with different sizing. `extension/content/navigation.js` now renders the same inline SVG chevron for Collection groups, Subscriptions, Distraction settings and the bottom Chanlume settings trigger; `content.css` owns their shared row/icon/hit-target tokens, and the redundant settings override in `subscriptions.css` was removed. The native expanded guide's scroll container hosts a two-part nav shell: independently scrollable main navigation, and a docked settings footer. Expanding Chanlume increases the footer upward, reducing the main scroll region rather than covering main buttons; the summary remains at the bottom. Layout uses the native 56px masthead height and a fixture override for its 80px demo header.

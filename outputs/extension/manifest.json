@@ -1,45 +1,80 @@
 {
-  "manifest_version": 3,
-  "name": "__MSG_appName__",
-  "version": "1.23.3",
-  "version_name": "1.23.3",
-  "description": "__MSG_appDescription__",
-  "default_locale": "en",
-  "permissions": ["storage"],
-  "host_permissions": ["https://www.youtube.com/*", "https://www.googleapis.com/youtube/v3/*"],
-  "action": {
-    "default_title": "__MSG_actionTitle__",
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "32": "icons/icon-32.png",
-      "48": "icons/icon-48.png",
-      "128": "icons/icon-128.png"
-    }
-  },
-  "icons": {
-    "16": "icons/icon-16.png",
-    "32": "icons/icon-32.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "options_page": "dashboard/dashboard.html",
-  "web_accessible_resources": [{"resources": ["content/design-icons/*.svg"], "matches": ["https://www.youtube.com/*"]}],
-  "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content/identity-bridge.js"],
-      "run_at": "document_start",
-      "world": "MAIN"
-    },
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content/startup.js", "content/dom.js", "shared.js", "content/favorites.js", "content/subscriptions.js", "content/navigation.js", "content/content.js"],
-      "css": ["content/content.css", "content/subscriptions.css"],
-      "run_at": "document_start"
-    }
-  ]
+    "manifest_version":  3,
+    "name":  "__MSG_appName__",
+    "version":  "1.24.0",
+    "version_name":  "1.24.0",
+    "description":  "__MSG_appDescription__",
+    "default_locale":  "en",
+    "permissions":  [
+                        "storage"
+                    ],
+    "host_permissions":  [
+                             "https://www.youtube.com/*",
+                             "https://www.googleapis.com/youtube/v3/*"
+                         ],
+    "action":  {
+                   "default_title":  "__MSG_actionTitle__",
+                   "default_popup":  "popup/popup.html",
+                   "default_icon":  {
+                                        "16":  "icons/icon-16.png",
+                                        "32":  "icons/icon-32.png",
+                                        "48":  "icons/icon-48.png",
+                                        "128":  "icons/icon-128.png"
+                                    }
+               },
+    "icons":  {
+                  "16":  "icons/icon-16.png",
+                  "32":  "icons/icon-32.png",
+                  "48":  "icons/icon-48.png",
+                  "128":  "icons/icon-128.png"
+              },
+    "background":  {
+                       "service_worker":  "background.js"
+                   },
+    "options_page":  "dashboard/dashboard.html",
+    "web_accessible_resources":  [
+                                     {
+                                         "resources":  [
+                                                           "content/design-icons/*.svg"
+                                                       ],
+                                         "matches":  [
+                                                         "https://www.youtube.com/*"
+                                                     ]
+                                     }
+                                 ],
+    "content_scripts":  [
+                            {
+                                "matches":  [
+                                                "https://www.youtube.com/*"
+                                            ],
+                                "js":  [
+                                           "content/identity-bridge.js"
+                                       ],
+                                "run_at":  "document_start",
+                                "world":  "MAIN"
+                            },
+                            {
+                                "matches":  [
+                                                "https://www.youtube.com/*"
+                                            ],
+                                "js":  [
+                                           "content/startup.js",
+                                           "content/dom.js",
+                                           "shared.js",
+                                           "content/favorites.js",
+                                           "content/subscriptions.js",
+                                           "content/home.js",
+                                           "content/watch.js",
+                                           "content/navigation.js",
+                                           "content/content.js"
+                                       ],
+                                "css":  [
+                                            "content/content.css",
+                                            "content/subscriptions.css",
+                                            "content/home.css",
+                                            "content/watch.css"
+                                        ],
+                                "run_at":  "document_start"
+                            }
+                        ]
 }

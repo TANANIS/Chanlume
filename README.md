@@ -23,7 +23,7 @@
 
 <img src="outputs/store-assets/screenshot-library-1280x800.png" alt="Chanlume subscription library with synthetic demo data" width="800">
 
-**Current GitHub version: 1.23.3.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
+**Current GitHub version: 1.24.0.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
 
 The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, including a direct Timeline reload, multiple native infinite-scroll continuations, unique video IDs, full Channels directory and return to native Feed. It preserves YouTube's original subscription data flow and does not change the Home recommendation algorithm. See [technical validation](HANDOFF.md) for the exact checks and their limits.
 
@@ -39,7 +39,19 @@ The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, incl
 
 ## Download & install
 
-**[Download Chanlume 1.23.3](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.23.3.zip)** · [Source tag v1.23.3](https://github.com/TANANIS/Chanlume/tree/v1.23.3)
+**[Download Chanlume 1.24.0](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.0.zip)** · [Source tag v1.24.0](https://github.com/TANANIS/Chanlume/tree/v1.24.0)
+
+**Chrome Web Store status:** 1.24.0 is prepared for developer-console upload; a GitHub package is not proof of Store submission, approval or publication.
+
+Version 1.24.0 ZIP SHA-256: `71212c6cef1756b95e02e6c1a6e6656a6daacabf6515e598f4e3f15ba4cca325`.
+
+### What's new in 1.24.0
+
+- Integrates subscribed-channel classification into YouTube channel and Watch headers, including adding a channel to a newly created group.
+- Refines the native YouTube-backed Subscriptions Feed, Timeline and Channels views without inventing recommendations or losing historical group data.
+- Reorganizes Watch metadata and the native Recommendations, Transcript and Chat controls. YouTube-supplied automatic captions work in its original transcript panel, with search hidden while Chanlume is active.
+- Unifies the four left-sidebar disclosures, docks Chanlume settings at the bottom with upward expansion, and adds desktop mouse-edge reveal of the native YouTube sidebar.
+- Keeps all developer reload scripts and marker files out of the production Store ZIP.
 
 Version 1.23.3 ZIP SHA-256: `1686a281a984f3828e2ca353a2e59ed8683c10e0d7412ed51c79f26f31ef04f2`.
 
@@ -87,7 +99,7 @@ The currently published extension is available from the [Chrome Web Store](https
 
 For manual installation:
 
-1. Download `Chanlume-1.23.3.zip` from the download link above.
+1. Download `Chanlume-1.24.0.zip` from the download link above.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.
@@ -257,7 +269,7 @@ The default interface is English unless a Traditional Chinese browser locale is 
 
 ## Development and verification
 
-Versioned packaging: run `scripts/package-extension.ps1` on Windows (or `scripts/package-extension.py` with Python). The scripts produce `outputs/Chanlume-<version>.zip`, copy the source to `outputs/extension/` and verify all source/mirror/ZIP entries byte-for-byte. They refuse to overwrite an existing archive. The 1.23.3 package contains 41 matching extension files. Earlier development archives are preserved locally as historical artifacts.
+Versioned packaging: stop the development watcher, then run `scripts/package-extension.ps1` on Windows (or `scripts/package-extension.py` with Python). The scripts produce `outputs/Chanlume-<version>.zip`, build a production-only `outputs/extension/` mirror and verify the mirror/ZIP entries byte-for-byte. The development reload marker, polling script and background reload handlers are excluded from production. Existing version archives are never overwritten.
 
 When Edge is unavailable, set `CHANLUME_BROWSER` to an existing Playwright Chromium executable before using `tests/local-fixture-preload.cjs`. This runs synthetic fixtures in an isolated temporary browser profile.
 
