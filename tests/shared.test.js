@@ -123,6 +123,7 @@ test("new distraction controls default off and migrate into saved state", () => 
   assert.equal(defaults.settings.hideShorts, false);
   assert.equal(defaults.settings.hideSecondary, false);
   assert.equal(defaults.settings.disableAutoplay, false);
+  assert.equal(defaults.settings.sidebarAutoExpandOnHover, true);
   assert.equal(defaults.settings.onboardingComplete, false);
   assert.equal(defaults.settings.language, Core.detectDefaultLanguage());
 
@@ -132,8 +133,24 @@ test("new distraction controls default off and migrate into saved state", () => 
   assert.equal(migrated.settings.hideSecondary, false);
   assert.equal(migrated.settings.disableAutoplay, false);
   assert.equal(migrated.settings.hideWatched, true);
+  assert.equal(migrated.settings.sidebarAutoExpandOnHover, true);
   assert.equal(migrated.settings.onboardingComplete, false);
   assert.equal(migrated.settings.language, Core.detectDefaultLanguage());
+});
+
+test("sidebar proximity setting defaults on, persists through normalization and respects semantic mutations", () => {
+  const oldState = Core.normalizeState({ channels: { '/@one': { name: 'One' } }, groups: [{id:'custom',name:'Custom',channelIds:['/@one']}] });
+  assert.equal(oldState.settings.sidebarAutoExpandOnHover, true, 'old stored libraries retain existing hover behavior');
+  const off = Core.applyStateOperation(oldState, { type: 'set-setting', payload: { setting: 'sidebarAutoExpandOnHover', enabled: false } });
+  assert.equal(off.settings.sidebarAutoExpandOnHover, false);
+  assert.equal(Core.normalizeState(off).settings.sidebarAutoExpandOnHover, false, 'reload must keep explicit off');
+  assert.deepEqual(off.channels, oldState.channels);
+  assert.deepEqual(off.groups, oldState.groups);
+  const on = Core.applyStateOperation(off, { type: 'set-setting', payload: { setting: 'sidebarAutoExpandOnHover', enabled: true } });
+  assert.equal(on.settings.sidebarAutoExpandOnHover, true);
+  assert.equal(Core.normalizeState(on).settings.sidebarAutoExpandOnHover, true);
+  assert.equal(Core.normalizeState({ settings: { sidebarAutoExpandOnHover: 'false' } }).settings.sidebarAutoExpandOnHover, true, 'invalid stored values are not authoritative');
+  assert.equal(Core.translateUiText('靠近側邊欄時自動展開', 'en'), 'Auto-expand sidebar on hover');
 });
 
 test("interface language is normalized and English UI text supports dynamic counts", () => {

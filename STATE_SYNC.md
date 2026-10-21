@@ -14,6 +14,12 @@ New messages use `CHANLUME_*`; the background accepts old `TUBESHELF_*` requests
 
 ## Mutation protocol
 
+### Sidebar proximity preference (1.24.2)
+
+`settings.sidebarAutoExpandOnHover` is a locally persisted boolean, defaulting to `true` when missing from older stored states or backups. The sidebar's mouse-only native-guide edge hover is enabled only when this setting and Chanlume's global power are both on. The setting lives alongside the existing five switches in **Reduce distractions** and uses the existing `set-setting` semantic mutation through the background queue; the UI and hover handler do not write storage directly.
+
+Disabling the preference cancels pending hover-open/auto-close timers and prevents late delayed hover callbacks. It never disables YouTube's own guide hamburger button, replaces the drawer, or closes a manually opened drawer. The saved off state must survive normal YouTube navigation and a full page reload. Re-enabling restores the existing proximity behavior.
+
 Frontends send a `CHANLUME_MUTATE` runtime message containing one semantic operation. Supported operations are implemented by `ChanlumeCore.applyStateOperation()`:
 
 - `toggle-membership`

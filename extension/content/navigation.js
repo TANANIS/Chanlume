@@ -25,7 +25,7 @@
       hoverOpened = false;
     }
     function onGuidePointerMove(event) {
-      if (!state?.settings.enabled || event.pointerType !== "mouse" ||
+      if (!state?.settings.enabled || !state.settings.sidebarAutoExpandOnHover || event.pointerType !== "mouse" ||
           !window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ||
           window.innerWidth < 960 || document.fullscreenElement) {
         stopHover();
@@ -38,7 +38,7 @@
         clearLeaveTimer();
         if (!edgeTimer) edgeTimer = setTimeout(() => {
           edgeTimer = null;
-          if (pointerX > 72 || pointerY < 56 || guideOpen() || !state?.settings.enabled) return;
+          if (pointerX > 72 || pointerY < 56 || guideOpen() || !state?.settings.enabled || !state.settings.sidebarAutoExpandOnHover) return;
           const button = document.querySelector("ytd-masthead #guide-button button");
           if (!button) return;
           button.click(); // Use YouTube's own drawer instead of moving/replacing its DOM.
@@ -75,7 +75,8 @@
       ["關閉 Shorts", "hideShorts"],
       ["隱藏影片右側欄", "hideSecondary"],
       ["關閉自動播放", "disableAutoplay"],
-      ["隱藏已觀看影片", "hideWatched"]
+      ["隱藏已觀看影片", "hideWatched"],
+      ["靠近側邊欄時自動展開", "sidebarAutoExpandOnHover"]
     ];
     function distractionMarkup() {
       const switches = distractionSettings.map(([name, setting]) => `<div class="cl-nav-setting-row"><span class="cl-nav-setting-label">${label(name)}</span><button class="cl-nav-switch" type="button" role="switch" data-cl-setting="${setting}" aria-label="${label(name)}" aria-checked="${Boolean(state.settings[setting])}"><span aria-hidden="true"></span></button></div>`).join("");
@@ -264,6 +265,7 @@ return `<nav class="cl-nav-shell" aria-label="${label('主要導覽')}"><div cla
       render() {
         state = context.getState();
         activeGroupId = context.getActiveGroup();
+        if (!state.settings.enabled || !state.settings.sidebarAutoExpandOnHover) stopHover();
         document.removeEventListener("pointermove", onGuidePointerMove, true);
         document.addEventListener("pointermove", onGuidePointerMove, true);
         document.removeEventListener("click", onNativeGuideClick, true);

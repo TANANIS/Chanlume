@@ -74,8 +74,52 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     assert.equal(Math.abs(geometry.summary.bottom-geometry.footer.bottom)<12,true,'Chanlume summary stays at the bottom when expanded');
     assert.equal(geometry.footer.bottom<=geometry.height+1,true,'docked summary must stay inside the viewport');
     const switches=guide.locator('.cl-nav-switch');
-    assert.equal(await switches.count(),5);
+    assert.equal(await switches.count(),6);
     assert.equal(await switches.evaluateAll(items=>items.every(button=>button.getAttribute('role')==='switch'&&button.getAttribute('aria-label'))),true);
+    const hoverSwitch=guide.locator('[data-cl-setting=sidebarAutoExpandOnHover]');
+    assert.equal(await hoverSwitch.getAttribute('aria-checked'),'true','auto-open remains on by default');
+    assert.equal(await hoverSwitch.getAttribute('aria-label'),'Auto-expand sidebar on hover');
+    await hoverSwitch.click();
+    await page.waitForFunction(()=>document.querySelector('[data-cl-setting=sidebarAutoExpandOnHover]')?.getAttribute('aria-checked')==='false');
+    assert.equal(await page.evaluate(()=>__state().settings.sidebarAutoExpandOnHover),false);
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('shelf-fixture')).settings.sidebarAutoExpandOnHover),false,'off state is persisted');
+    // When the setting is disabled, approaching the same native guide hotspot
+    // must never synthesize a click. The real manual guide button still works.
+    await page.evaluate(()=>{
+      const app=document.createElement('ytd-app');app.id='hover-disabled-app';
+      app.innerHTML='<div id="guide" style="visibility:hidden"><div id="guide-wrapper" style="position:fixed;left:0;top:56px;width:240px;height:500px"></div></div>';
+      document.body.append(app);
+      const mast=document.createElement('ytd-masthead');mast.id='hover-disabled-mast';
+      mast.innerHTML='<div id="guide-button"><button aria-label="Guide">Guide</button></div>';
+      document.body.append(mast);
+      window.__offDrawerToggles=0;
+      mast.querySelector('button').addEventListener('click',()=>{
+        const drawer=app.querySelector('#guide');
+        drawer.style.visibility=drawer.style.visibility==='visible'?'hidden':'visible';
+        window.__offDrawerToggles++;
+      });
+    });
+    await page.mouse.move(500,120);
+    await page.mouse.move(30,120);
+    await page.waitForTimeout(350);
+    assert.equal(await page.evaluate(()=>window.__offDrawerToggles),0,'hover is disabled');
+    await page.evaluate(()=>document.querySelector('#hover-disabled-mast button').click());
+    assert.equal(await page.evaluate(()=>window.__offDrawerToggles),1,'manual native guide click still works');
+    await page.mouse.move(450,120);
+    await page.waitForTimeout(520);
+    assert.equal(await page.evaluate(()=>window.__offDrawerToggles),1,'manually opened guide is not auto-closed');
+    await page.evaluate(()=>document.querySelector('#hover-disabled-mast button').click());
+    await hoverSwitch.click();
+    await page.waitForFunction(()=>document.querySelector('[data-cl-setting=sidebarAutoExpandOnHover]')?.getAttribute('aria-checked')==='true');
+    await page.mouse.move(500,120);
+    await page.mouse.move(30,120);
+    await page.waitForFunction(()=>window.__offDrawerToggles===3);
+    await page.mouse.move(460,120);
+    await page.waitForFunction(()=>window.__offDrawerToggles===4);
+    await page.evaluate(()=>{document.querySelector('#hover-disabled-app')?.remove();document.querySelector('#hover-disabled-mast')?.remove();});
+    // Restore the prior disabled choice to prove it survives a full reload.
+    await hoverSwitch.click();
+    await page.waitForFunction(()=>document.querySelector('[data-cl-setting=sidebarAutoExpandOnHover]')?.getAttribute('aria-checked')==='false');
     const support=guide.locator('.cl-nav-support');
     assert.equal(await support.getAttribute('href'),'https://buymeacoffee.com/tananis');
     assert.equal(await support.getAttribute('target'),'_blank');
@@ -175,7 +219,12 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     assert.equal(await page.locator('#native-nav').evaluate(el=>getComputedStyle(el).display!=='none'),true);
     await page.evaluate(()=>{const next=structuredClone(__state());next.settings.enabled=true;next.revision++;__change(next);});
     await guide.waitFor({state:'attached'});await mini.waitFor();
+    await page.reload();
+    await page.locator('#chanlume-guide-section').waitFor();
+    await page.locator('.cl-nav-settings > summary').click();
+    await page.locator('.cl-nav-distractions > summary').click();
+    assert.equal(await page.locator('[data-cl-setting=sidebarAutoExpandOnHover]').getAttribute('aria-checked'),'false','reloaded UI reflects persisted off state');
     assert.deepEqual(errors,[]);
-    console.log('PASS navigation: sidebar distraction switches, persisted semantic settings, expanded disclosure, support link moved from panel, expanded/mini routes, selected state, native restore, Home/Shorts rules, modern titles, relevant shelf exclusion/reuse/localization.');
+    console.log('PASS navigation: six sidebar switches, manual native click vs hover on/off, persisted hover choice through reload, expanded disclosure, support link, routes, Home/Shorts, modern titles and localization.');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

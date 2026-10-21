@@ -2,6 +2,8 @@
 
 > **Security notice (2026-10-21): Version 1.24.0 was withdrawn after a Microsoft Defender malware alert.** Version 1.24.1 was rebuilt with the scanned, byte-identical 1.23.3 production background script; local Defender rescans found no new detections. This is not a guarantee against future browser reputation flags or independent malware findings. Do not override antivirus warnings. The affected v1.24.0 tag remains only for forensic reference. See [security review](SECURITY_REVIEW_1.24.1.md).
 
+> **1.24.2 update:** The optional proximity-open behavior of YouTube's left guide can now be disabled under **Chanlume → Reduce distractions → Auto-expand sidebar on hover**. Existing installations default to on; switching off disables only mouse-edge automatic opening, not the manual YouTube hamburger button. The preference stays local and persists across refreshes.
+
 > **2026-10-21 sidebar refinement (main):** Collections, Subscriptions, Distraction settings and Chanlume settings now use a single 46px row rhythm and the same SVG chevron. The Chanlume settings trigger remains at the bottom of the expanded YouTube guide; opening it shows settings above the trigger while the independent main navigation scrolls in the remaining space. On a desktop with a fine mouse pointer, hovering within the left mini-guide edge briefly opens YouTube's native guide; moving into the page closes only the drawer opened by hover. A manually opened guide is never auto-closed. These changes are frontend-only and keep the native guide button, keyboard access, and saved library untouched.
 
 > **2026-10-21 UI follow-up (source on main):** The left guide has consistent disclosure row sizing and no extra group-create + button. The Subscriptions category rail also has no create button; group creation remains in Collections and channel classification. Watch view/date metadata now has its own compact row below the original owner/actions controls, and transcript search controls are hidden without hiding native captions. The subscription View selector uses a styled, keyboard-accessible disclosure rather than the browser's native popup. This supersedes the earlier note below describing + buttons in the rail/sidebar; that earlier passage documents the previous implementation, not today's UI. No user library migration or additional permissions are involved.
@@ -25,7 +27,7 @@
 
 <img src="outputs/store-assets/screenshot-library-1280x800.png" alt="Chanlume subscription library with synthetic demo data" width="800">
 
-**Current GitHub version: 1.24.1.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
+**Current GitHub version: 1.24.2.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
 
 The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, including a direct Timeline reload, multiple native infinite-scroll continuations, unique video IDs, full Channels directory and return to native Feed. It preserves YouTube's original subscription data flow and does not change the Home recommendation algorithm. See [technical validation](HANDOFF.md) for the exact checks and their limits.
 
@@ -41,11 +43,19 @@ The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, incl
 
 ## Download & install
 
-**[Download Chanlume 1.24.1](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.1.zip)** · [Source tag v1.24.1](https://github.com/TANANIS/Chanlume/tree/v1.24.1)
+**[Download Chanlume 1.24.2](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.2.zip)** · [Previous audited source tag v1.24.1](https://github.com/TANANIS/Chanlume/tree/v1.24.1)
 
 The previous **1.24.0** download was withdrawn following a Defender alert. Do not install 1.24.0 from its historical source tag. [1.24.1 security review](SECURITY_REVIEW_1.24.1.md).
 
-**Chrome Web Store status:** 1.24.1 is ready for developer submission after local checks; no Store upload, approval, or publication has occurred. If a downloaded copy is flagged, stop and report it instead of overriding protection.
+**Chrome Web Store status:** 1.24.2 is packaged for a future developer submission, but no Store upload, approval, or publication is claimed. If a downloaded copy is flagged, stop and report it instead of overriding protection.
+
+Version 1.24.2 ZIP SHA-256: `51fe4fd050c3e12a179fe1ef2ca3c3d5395a30337528162b5cd82fe387e881c2`.
+
+### What's new in 1.24.2
+
+- Added a sixth Reduce distractions switch, **Auto-expand sidebar on hover**, localized in Traditional Chinese and English.
+- Existing users keep the previous hover-to-open behavior by default. Turning it off preserves manual YouTube guide control, with preference saved in the existing local state.
+- Kept the production background identical to the audited historical 1.23.3 script; the new ZIP excludes all development-only reload hooks.
 
 Version 1.24.1 ZIP SHA-256: `438155c9c0afa0da52f73ce74b376eeadc25ec7cb7173b3d4a77d7f041bcae77`.
 
@@ -109,9 +119,9 @@ Historical 1.19.4 package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec426389
 
 The currently published extension is available from the [Chrome Web Store](https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole?utm_source=item-share-cb).
 
-Manual installation of **1.24.0 remains suspended**. For the independently rebuilt 1.24.1 package, use the steps below. Never override browser or antivirus warnings; if blocked, stop and report the detection.
+Manual installation of **1.24.0 remains suspended**. For the 1.24.2 package, which retains the audited 1.23.3 background script, use the steps below. Never override browser or antivirus warnings; if blocked, stop and report the detection.
 
-1. Download the current 1.24.1 ZIP from the link above, without overriding any security warnings.
+1. Download the current 1.24.2 ZIP from the link above, without overriding any security warnings.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.

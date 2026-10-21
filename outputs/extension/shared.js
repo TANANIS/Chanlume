@@ -164,6 +164,7 @@
     "新手教學": "Getting started", "跳過教學": "Skip tutorial", "上一步": "Back", "下一步": "Next",
     "全部訂閱": "All subscriptions", "未分類": "Unclassified", "目前已收集": "Collected", "等待整理": "Needs organizing", "已分類": "Organized",
     "減少干擾": "Reduce distractions", "封鎖首頁": "Block Home",
+    "靠近側邊欄時自動展開": "Auto-expand sidebar on hover",
     "首頁推薦目前已封鎖，將直接前往訂閱內容。": "Home recommendations are blocked; opening Home redirects to subscriptions.",
     "首頁由 YouTube 演算法決定，不套用訂閱群組。": "YouTube's algorithm controls Home; subscription groups do not apply there.",
     "只有訂閱內容會套用群組與已觀看影片篩選。": "Groups and watched-video filters apply only to subscriptions.",
@@ -475,6 +476,7 @@
         hideSecondary: false,
         disableAutoplay: false,
         hideWatched: false,
+        sidebarAutoExpandOnHover: true,
         compactMode: false,
         onboardingComplete: false,
         language
@@ -570,6 +572,7 @@
         hideSecondary: typeof rawSettings.hideSecondary === "boolean" ? rawSettings.hideSecondary : base.settings.hideSecondary,
         disableAutoplay: typeof rawSettings.disableAutoplay === "boolean" ? rawSettings.disableAutoplay : base.settings.disableAutoplay,
         hideWatched: typeof rawSettings.hideWatched === "boolean" ? rawSettings.hideWatched : base.settings.hideWatched,
+        sidebarAutoExpandOnHover: typeof rawSettings.sidebarAutoExpandOnHover === "boolean" ? rawSettings.sidebarAutoExpandOnHover : base.settings.sidebarAutoExpandOnHover,
         compactMode: typeof rawSettings.compactMode === "boolean" ? rawSettings.compactMode : base.settings.compactMode,
         onboardingComplete: typeof rawSettings.onboardingComplete === "boolean" ? rawSettings.onboardingComplete : base.settings.onboardingComplete,
         language: languageCode(rawSettings.language)
@@ -1256,7 +1259,7 @@
     if (type === "coalesce-channel-identities") return coalesceChannelIdentities(current, payload.primaryChannel, payload.aliasIds);
     if (type === "set-setting") {
       const setting = String(payload.setting || "");
-      if (!["enabled", "blockHome", "hideShorts", "hideSecondary", "disableAutoplay", "hideWatched", "compactMode"].includes(setting)) throw new Error("Unknown setting");
+      if (!["enabled", "blockHome", "hideShorts", "hideSecondary", "disableAutoplay", "hideWatched", "sidebarAutoExpandOnHover", "compactMode"].includes(setting)) throw new Error("Unknown setting");
       return normalizeState({ ...current, settings: settingsAfterToggle(current.settings, setting, payload.enabled) });
     }
     if (type === "set-language") return normalizeState({ ...current, settings: { ...current.settings, language: languageCode(payload.language) } });
