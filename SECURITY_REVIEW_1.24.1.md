@@ -63,3 +63,10 @@ https://www.microsoft.com/en-us/wdsi/filesubmission.
 Final source verification: **89/89 Node tests and 16/16 browser fixture
 suites passed**, including production background hash and development-file
 exclusion assertions. No direct Chrome Web Store upload is claimed.
+
+After the `v1.24.1` Git push, the exact versioned ZIP was downloaded again
+from `raw.githubusercontent.com` into a separate working directory.
+Its SHA-256 matched the published ZIP exactly
+(`438155c9c0afa0da52f73ce74b376eeadc25ec7cb7173b3d4a77d7f041bcae77`).
+Defender scanned the downloaded copy without new detections.
+This is not a substitute for Helium's own browser download-reputation check.
