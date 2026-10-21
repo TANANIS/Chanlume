@@ -8,6 +8,48 @@ const favoriteFeedCache = new Map();
 const favoriteFeedPending = new Map();
 const recentFeedCache = new Map();
 const recentFeedPending = new Map();
+const DEV_RELOAD_FILE = "dev-reload.json";
+const DEV_RELOAD_PENDING = "chanlumeDevReloadPending";
+let devReloading = false;
+
+async function readDevReloadMarker() {
+  try {
+    const response = await fetch(chrome.runtime.getURL(DEV_RELOAD_FILE), { cache: "no-store" });
+    if (!response.ok) return null;
+    const marker = await response.json();
+    if (marker?.chanlumeDevWatch !== true || typeof marker.revision !== "string" ||
+        !/^[0-9a-f-]{36}$/i.test(marker.revision) || !Number.isFinite(marker.updatedAt) ||
+        Math.abs(Date.now() - marker.updatedAt) > 20000) return null;
+    return marker;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function requestDevReload(revision, sender) {
+  if (!sender?.tab?.url?.startsWith("https://www.youtube.com/")) return { ok: false };
+  if (devReloading) return { ok: true, pending: true };
+  const marker = await readDevReloadMarker();
+  if (!marker || marker.revision !== revision) return { ok: false };
+  devReloading = true;
+  // Separate ephemeral key; never touch or replace the user's channel/group state.
+  await chrome.storage.local.set({ [DEV_RELOAD_PENDING]: { revision, at: Date.now() } });
+  chrome.runtime.reload();
+  return { ok: true };
+}
+
+async function refreshDevTabsAfterReload() {
+  const data = await chrome.storage.local.get(DEV_RELOAD_PENDING);
+  const pending = data[DEV_RELOAD_PENDING];
+  if (!pending) return;
+  await chrome.storage.local.remove(DEV_RELOAD_PENDING);
+  if (!Number.isFinite(pending.at) || Date.now() - pending.at > 60000) return;
+  const tabs = await chrome.tabs.query({ url: "https://www.youtube.com/*" });
+  const targets = tabs.filter(tab =>
+    tab.id && (tab.active || /^https:\/\/www\.youtube\.com\/feed\/(?:subscriptions|channels)(?:[/?#]|$)/.test(tab.url || "")));
+  await Promise.allSettled(targets.map(tab => chrome.tabs.reload(tab.id)));
+  console.info(`Chanlume dev reload: refreshed ${targets.length} YouTube tab(s)`);
+}
 
 async function readRecentFeed(identity, force = false) {
   const state = Core.normalizeState((await Core.readStoredValues(chrome.storage.local, STORAGE_KEY))[STORAGE_KEY]);
@@ -146,12 +188,31 @@ chrome.runtime.onInstalled.addListener((details) => enqueueStateTask(async () =>
   if (details.reason === "install") {
     await chrome.tabs.create({ url: chrome.runtime.getURL("dashboard/dashboard.html?view=settings"), active: true });
   }
+  if (details.reason === "update") await refreshDevTabsAfterReload();
 }).catch((error) => console.error("Chanlume installation setup failed", error)));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Already-open older frontends may finish a request during an extension update.
   if (typeof message?.type === "string" && message.type.startsWith("TUBESHELF_")) {
     message = { ...message, type: message.type.replace(/^TUBESHELF_/, "CHANLUME_") };
+  }
+  if (message?.type === "CHANLUME_DEV_MARKER") {
+    if (!_sender?.tab?.url?.startsWith("https://www.youtube.com/")) {
+      sendResponse({ ok: false });
+      return false;
+    }
+    readDevReloadMarker()
+      .then(marker => sendResponse({ ok: true, marker: marker ? {
+        chanlumeDevWatch: true, revision: marker.revision, updatedAt: marker.updatedAt
+      } : null }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (message?.type === "CHANLUME_DEV_RELOAD") {
+    requestDevReload(message.revision, _sender)
+      .then(result => sendResponse(result))
+      .catch(error => { devReloading = false; sendResponse({ ok: false, error: String(error) }); });
+    return true;
   }
   if (message?.type === "CHANLUME_CHANNEL_FEED") {
     readRecentFeed(message.channelId,message.force===true)

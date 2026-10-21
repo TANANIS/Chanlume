@@ -1,0 +1,6 @@
+# Test-only Playwright binary (downloaded on demand, never part of the extension).
+work/playwright-runtime/
+
+# Local signing identity and its generated developer package.
+extension.pem
+extension.crx

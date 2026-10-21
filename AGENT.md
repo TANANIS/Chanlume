@@ -18,6 +18,9 @@ This file defines the working rules for agents and maintainers changing Chanlume
 - `extension/content/recent.js`: historical per-tab public recent-content reader; retained but not injected or called by the current native-feed-only Subscriptions UI.
 - `extension/content/navigation.js`: sidebar/group toolbar mounting and navigation lifecycle.
 - `extension/content/subscriptions.js` and `subscriptions.css`: subscription views and Collections management; existing semantic operations remain the only persistence path.
+- `extension/content/home.js` and `home.css`: read-only Figma-inspired presentation of existing YouTube Home recommendation cards; never fetch, rank, reparent or persist the native recommendations.
+- `extension/content/watch.js` and `watch.css`: read-only native Watch-page fact labels and layout; retain YouTube's interactive elements and fail open if labels are unavailable.
+- `scripts/dev-watch.cjs`, `scripts/dev-watch.ps1` and `extension/content/dev-reload.js`: opt-in local unpacked-extension reload; only active while the watched marker is fresh. Compare source snapshots because Windows can emit duplicate filesystem events without file changes. Keep released packages and user data untouched.
 - `extension/content/identity-bridge.js`: MAIN-world, read-only bridge for stable YouTube channel identity evidence.
 - `extension/dashboard/`: full collection and settings UI.
 - `extension/popup/`: compact extension UI.
@@ -89,4 +92,5 @@ For identity changes, manually verify at minimum that a channel categorized from
 - Record the package SHA-256 in `HANDOFF.md` or the release notes.
 - Do not publish, push, tag, or submit to a browser store unless the user explicitly requests it.
 - Never describe a package as released when only a local artifact was built.
+- Stop the dev watcher and confirm `extension/dev-reload.json` is disabled before packaging. Use Ctrl+C for a foreground watcher, or `powershell -ExecutionPolicy Bypass -File .\scripts\dev-watch.ps1 -Stop` for a hidden/background watcher. A live marker must not be shipped in a release.
 

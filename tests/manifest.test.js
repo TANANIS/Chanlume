@@ -91,5 +91,21 @@ test("YouTube surfaces bootstrap before the native page's first render", () => {
   assert.deepEqual(isolated.js.slice(0,2), ["content/startup.js", "content/dom.js"]);
   assert.ok(isolated.css.includes("content/content.css"));
   assert.ok(isolated.js.includes("content/subscriptions.js"));
+  assert.ok(isolated.js.includes("content/home.js"));
+  assert.ok(isolated.js.indexOf("content/home.js") < isolated.js.indexOf("content/content.js"));
+  assert.ok(isolated.css.includes("content/home.css"));
+  assert.ok(isolated.js.indexOf("content/watch.js") > isolated.js.indexOf("content/subscriptions.js"));
+  assert.ok(isolated.js.indexOf("content/watch.js") < isolated.js.indexOf("content/content.js"));
+  assert.ok(isolated.css.includes("content/watch.css"));
   assert.ok(!isolated.js.includes("content/recent.js"), "native subscriptions must not inject the per-channel reader");
+});
+
+test("optional local development reload uses no extra extension permissions", () => {
+  const isolated = manifest.content_scripts.find(entry => entry.world !== "MAIN");
+  assert.equal(isolated.js.at(-1), "content/dev-reload.js");
+  const resources = manifest.web_accessible_resources.flatMap(group => group.resources);
+  assert.ok(!resources.includes("dev-reload.json"), "developer marker must be read only by the extension worker");
+  const marker = JSON.parse(fs.readFileSync(path.join(extensionRoot, "dev-reload.json"), "utf8"));
+  assert.equal(typeof marker.chanlumeDevWatch, "boolean");
+  assert.equal(manifest.permissions.length, 1);
 });

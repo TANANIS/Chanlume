@@ -15,7 +15,7 @@
   let homeRedirecting = false;
   let shortsRedirecting = false;
   const VIDEO_CARD_SELECTOR = "ytd-rich-item-renderer, ytd-video-renderer, ytd-grid-video-renderer, ytd-channel-renderer, ytd-compact-video-renderer, yt-lockup-view-model";
-  const STRUCTURE_SELECTOR = 'ytd-rich-shelf-renderer, ytd-guide-renderer, ytd-mini-guide-renderer, ytd-browse[page-subtype="subscriptions"], ytd-watch-flexy, yt-page-header-view-model, yt-page-header-renderer, yt-content-metadata-view-model, .ytContentMetadataViewModelMetadataRow, yt-flexible-actions-view-model, yt-subscribe-button-view-model';
+  const STRUCTURE_SELECTOR = 'ytd-rich-shelf-renderer, ytd-guide-renderer, ytd-mini-guide-renderer, ytd-browse[page-subtype="subscriptions"], ytd-watch-flexy, ytd-watch-metadata, ytd-watch-info-text, yt-page-header-view-model, yt-page-header-renderer, yt-content-metadata-view-model, .ytContentMetadataViewModelMetadataRow, yt-flexible-actions-view-model, yt-subscribe-button-view-model';
   const pendingCards = new Set();
   let pendingFullRefresh = false;
   let pendingStructureRefresh = false;
@@ -25,7 +25,7 @@
   let subscriptionSyncFailures = 0;
   const scanIdentityByAlias = new Map();
   const IDENTITY_BRIDGE_SOURCE = "chanlume-identity-bridge";
-  const OWN_UI_SELECTOR = '#chanlume-subscriptions-page, #chanlume-shelf-sticky, #chanlume-favorites-page, #chanlume-toolbar, #chanlume-guide-section, #chanlume-mini-guide, #chanlume-scan-progress, #chanlume-channel-control, #chanlume-channel-classification, .chanlume-card-classification';
+  const OWN_UI_SELECTOR = '#chanlume-subscriptions-page, #chanlume-shelf-sticky, #chanlume-favorites-page, #chanlume-home-featured, #chanlume-watch-facts, #chanlume-watch-side-tabs, #chanlume-toolbar, #chanlume-guide-section, #chanlume-mini-guide, #chanlume-scan-progress, #chanlume-channel-control, #chanlume-channel-classification, .chanlume-card-classification';
   let membershipsByChannel = new Map();
   let unfiledIds = [];
   let stateLoaded = false;
@@ -33,6 +33,8 @@
   let autoplayRestore = null;
   let startupScanTimer = null;
   const favorites = globalThis.createChanlumeFavorites({ getState: () => state, commit, openGroup: openSubscriptionGroup });
+  const home = globalThis.createChanlumeHome({ getState: () => state });
+  const watch = globalThis.createChanlumeWatch({ Core, getState: () => state });
   document.documentElement?.classList.add("chanlume-disabled");
 
   function publishPowerState() {
@@ -41,6 +43,8 @@
 
   function pauseIntegration() {
     favorites.clear();
+    home.clear();
+    watch.clear();
     subscriptions.clear();
     navigation.clear();
     observer.disconnect();
@@ -343,27 +347,29 @@
     const host = currentControlHost();
     const recordId = currentChannelRecordId(channel);
     const subscribed = currentSubscriptionStatus();
-    if (!channel || !host || !recordId || subscribed === false) { document.getElementById("chanlume-channel-control")?.remove(); return; }
+    if (!channel || !host) { document.getElementById("chanlume-channel-control")?.remove(); return; }
     let control = document.getElementById("chanlume-channel-control");
     if (!control) {
       control = document.createElement("div");
       control.id = "chanlume-channel-control";
       control.addEventListener("click", onCurrentChannelClick);
+      control.addEventListener("submit", onCurrentChannelCreateGroup);
       host.insertAdjacentElement("afterend", control);
     } else if (control.previousElementSibling !== host) {
       host.insertAdjacentElement("afterend", control);
     }
     const memberships = new Set(channelGroups(channel.id).map((group) => group.id));
     const favorite = state.favoriteChannelIds.includes(recordId);
-    const signature = JSON.stringify([channel.id, channel.name, subscribed, favorite, currentLanguage(), [...memberships], state.groups.map((group) => [group.id, group.name, group.color])]);
+    const canFile = Boolean(recordId) && subscribed !== false;
+    const signature = JSON.stringify([channel.id, channel.name, subscribed, canFile, favorite, currentLanguage(), [...memberships], state.groups.map((group) => [group.id, group.name, group.color])]);
     if (control.dataset.signature === signature) return;
     const wasOpen = control.classList.contains("cl-current-open");
     control.dataset.signature = signature;
     control.dataset.channelId = channel.id;
     const options = state.groups.length
-      ? state.groups.map((group) => `<label class="cl-current-option"><input type="checkbox" data-cl-current-group="${escapeHtml(group.id)}" ${memberships.has(group.id) ? "checked" : ""}><span class="cl-current-dot" style="background:${group.color}"></span><span>${escapeHtml(group.name)}</span></label>`).join("")
+      ? state.groups.map((group) => `<label class="cl-current-option"><input type="checkbox" data-cl-current-group="${escapeHtml(group.id)}" ${memberships.has(group.id) ? "checked" : ""} ${canFile ? "" : "disabled"}><span class="cl-current-dot" style="background:${group.color}"></span><span>${escapeHtml(group.name)}</span></label>`).join("")
       : '<span class="cl-current-empty">尚未建立群組</span>';
-    control.innerHTML = `<button class="cl-current-trigger" type="button" aria-expanded="${wasOpen}" title="更改這個頻道的分類"><span>${Core.iconSvg("book", "currentColor", 15)}</span><span>分類</span></button><div class="cl-current-menu"><strong>${escapeHtml(channel.name)}</strong><small>${memberships.size ? "選擇所屬群組" : "目前在未分類"}</small><div>${options}</div><button data-cl-current-manage type="button">管理全部群組 ↗</button></div>`;
+    control.innerHTML = `<button class="cl-current-trigger" type="button" aria-expanded="${wasOpen}" title="更改這個頻道的分類"><span>${Core.iconSvg("book", "currentColor", 15)}</span><span>分類</span></button><div class="cl-current-menu"><strong>${escapeHtml(channel.name)}</strong><small>${canFile ? memberships.size ? "選擇所屬群組" : "目前在未分類" : "訂閱頻道後即可加入分類"}</small><div class="cl-current-options">${options}</div><button data-cl-current-create type="button" aria-expanded="false" ${canFile ? "" : "disabled"}>＋ 新增群組</button><form class="cl-current-new-form" hidden><label>群組名稱<input name="name" maxlength="40" autocomplete="off" required placeholder="輸入分類名稱"></label><label>標記顏色<input name="color" type="color" value="#7c5cff"></label><p class="cl-current-form-error" role="status" aria-live="polite"></p><div class="cl-current-form-actions"><button type="button" data-cl-current-cancel>取消</button><button type="submit" class="cl-current-create-submit">建立並加入</button></div></form><button data-cl-current-manage type="button">管理全部群組 ↗</button></div>`;
     control.classList.toggle("cl-current-open", wasOpen);
     const star = document.createElement("button");
     star.className = "cl-current-favorite";
@@ -371,7 +377,7 @@
     star.setAttribute("aria-pressed", String(favorite));
     star.title = Core.translateUiText(favorite ? "取消關注" : "關注頻道", currentLanguage());
     star.textContent = `${favorite ? "★" : "☆"} ${Core.translateUiText(favorite ? "已關注" : "關注頻道", currentLanguage())}`;
-    control.append(star);
+    if (canFile) control.append(star);
     localizeExtensionUi(control);
     const menu = control.querySelector('.cl-current-menu');
     menu.setAttribute('popover', 'manual');
@@ -415,16 +421,60 @@
       chrome.runtime.sendMessage({ type: "OPEN_DASHBOARD" });
       return;
     }
+    if (event.target.closest("[data-cl-current-create]")) {
+      const control = event.currentTarget, form = control.querySelector(".cl-current-new-form");
+      form.hidden = !form.hidden;
+      control.querySelector("[data-cl-current-create]").setAttribute("aria-expanded", String(!form.hidden));
+      if (!form.hidden) form.querySelector("[name=name]")?.focus();
+      setCurrentMenuOpen(control, true);
+      return;
+    }
+    if (event.target.closest("[data-cl-current-cancel]")) {
+      const control = event.currentTarget;
+      control.querySelector(".cl-current-new-form").hidden = true;
+      control.querySelector("[data-cl-current-create]").setAttribute("aria-expanded", "false");
+      setCurrentMenuOpen(control, true);
+      return;
+    }
     const input = event.target.closest("[data-cl-current-group]");
     if (!input) return;
     const channel = currentChannelFromPage();
-    if (!channel || currentSubscriptionStatus() === false) { input.checked = false; toast("請先訂閱這個頻道，再加入群組"); return; }
+    if (!channel || !currentChannelRecordId(channel) || currentSubscriptionStatus() === false) { input.checked = false; toast("請先訂閱這個頻道，再加入群組"); return; }
     const group = state.groups.find((item) => item.id === input.dataset.clCurrentGroup);
     const enabled = input.checked;
     try {
       await commit({ type: "toggle-membership", payload: { channel, channelId: channel.id, aliasIds: channel.aliasIds, groupId: input.dataset.clCurrentGroup, enabled } });
       toast(enabled ? `已加入「${group?.name || "群組"}」` : `已移出「${group?.name || "群組"}」`);
     } catch (_) { input.checked = !enabled; toast("儲存失敗，請重試。"); }
+  }
+
+  async function onCurrentChannelCreateGroup(event) {
+    if (!event.target.matches(".cl-current-new-form")) return;
+    event.preventDefault();
+    const form = event.target;
+    if (form.dataset.saving === "true") return;
+    const channel = currentChannelFromPage();
+    const channelId = currentChannelRecordId(channel);
+    const name = form.elements.namedItem("name")?.value.trim() || "";
+    const color = form.elements.namedItem("color")?.value || "#7c5cff";
+    const status = form.querySelector(".cl-current-form-error");
+    if (!channelId || currentSubscriptionStatus() === false) {
+      status.textContent = "請先訂閱這個頻道，再新增分類";
+      return;
+    }
+    if (!name) { status.textContent = "請輸入群組名稱"; return; }
+    form.dataset.saving = "true";
+    form.querySelectorAll("button,input").forEach(node => { node.disabled = true; });
+    try {
+      await commit({ type: "create-group-for-channel", payload: { channelId, name, color } });
+      toast(`已建立「${name}」並加入頻道`);
+      renderCurrentChannelControl();
+    } catch (_) {
+      if (form.isConnected) {
+        status.textContent = "建立失敗，請重試。";
+        form.querySelectorAll("button,input").forEach(node => { node.disabled = false; });
+      }
+    } finally { delete form.dataset.saving; }
   }
 
   async function syncSubscriptionState() {
@@ -498,7 +548,12 @@
     toast.timer = setTimeout(() => node.classList.remove("cl-show"), 2200);
   }
 
-  function renderIntegratedControls() { globalThis.ChanlumeStartup?.sync(state.settings.enabled); navigation.render(); }
+  function renderIntegratedControls() {
+    globalThis.ChanlumeStartup?.sync(state.settings.enabled);
+    navigation.render();
+    home.render();
+    watch.render();
+  }
 
   async function changeSetting(setting, enabled) {
     await commit({ type: "set-setting", payload: { setting, enabled } });
@@ -846,6 +901,7 @@
       syncActiveGroupFromLocation();
       scheduleRefresh(0, { full: true, structure: true });
     });
+    document.addEventListener("yt-navigate-start", () => { home.clear(); watch.clear(); });
     window.addEventListener("hashchange", () => { syncActiveGroupFromLocation(); scheduleRefresh(0, { full: true }); });
     window.addEventListener("popstate", () => { syncActiveGroupFromLocation(); scheduleRefresh(0, { full: true }); });
     document.addEventListener("click", (event) => {

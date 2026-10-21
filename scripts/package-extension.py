@@ -8,6 +8,8 @@ import zipfile
 root = Path(__file__).resolve().parent.parent
 source = root / 'extension'
 mirror = root / 'outputs/extension'
+if json.loads((source / 'dev-reload.json').read_text(encoding='utf-8')).get('chanlumeDevWatch'):
+    raise RuntimeError('Stop scripts/dev-watch.ps1 before packaging; a live developer reload marker must never ship')
 version = json.loads((source / 'manifest.json').read_text(encoding='utf-8'))['version']
 archive = root / 'outputs' / f'Chanlume-{version}.zip'
 files = sorted(path.relative_to(source) for path in source.rglob('*') if path.is_file())

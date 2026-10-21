@@ -29,7 +29,7 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
       };
       document.dispatchEvent(new Event('yt-navigate-finish'));
     });
-    await page.locator('#chanlume-channel-control').waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.querySelector('#chanlume-channel-control .cl-current-trigger') && document.querySelector('#chanlume-channel-control [data-cl-current-create]')?.disabled === true);
     await page.evaluate(() => {
       const root = document.querySelector('yt-subscribe-button-view-model');
       root.children[0].style.visibility = 'hidden'; root.children[1].style.visibility = 'visible';
@@ -40,6 +40,27 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     await page.locator('.cl-current-trigger').click();
     assert.equal(await page.locator('.cl-current-menu').evaluate(n => n.matches(':popover-open')), true);
     await page.locator('[data-cl-current-group=learning]').check();
+    if (!(await page.locator('.cl-current-menu').isVisible())) await page.locator('.cl-current-trigger').click();
+    // Channel classification can create AND file a group in one commit.
+    await page.locator('[data-cl-current-create]').click();
+    await page.locator('.cl-current-new-form [name=name]').fill('Studio Notes');
+    await page.locator('.cl-current-new-form [name=color]').fill('#0088ff');
+    await page.locator('.cl-current-create-submit').click();
+    await page.waitForFunction(() => __getStoredState().groups.some(group => group.name === 'Studio Notes' && group.channelIds.includes('/@newchannel')));
+    assert.equal(await page.locator('#chanlume-channel-classification .cl-channel-classification-group').filter({ hasText: 'Studio Notes' }).count(), 1);
+    // A rejected mutation leaves no empty group and lets the user retry.
+    await page.locator('[data-cl-current-create]').click();
+    await page.locator('.cl-current-new-form [name=name]').fill('Rejected Draft');
+    await page.evaluate(() => {
+      const prior = chrome.runtime.sendMessage;
+      chrome.runtime.sendMessage = async message => message.operation?.type === 'create-group-for-channel'
+        ? { ok: false, error: 'Fixture rejected commit' } : prior(message);
+    });
+    await page.locator('.cl-current-create-submit').click();
+    await page.locator('.cl-current-form-error').getByText('建立失敗').waitFor();
+    assert.equal(await page.evaluate(() => __getStoredState().groups.some(group => group.name === 'Rejected Draft')), false);
+    assert.equal(await page.locator('.cl-current-create-submit').isEnabled(), true);
+    await page.locator('[data-cl-current-cancel]').click();
     await page.locator('.cl-current-favorite').click();
     await page.waitForFunction(() => __getStoredState().favoriteChannelIds.includes('/@newchannel'));
     assert.ok((await page.evaluate(() => __getStoredState())).groups.find(g => g.id === 'learning').channelIds.includes('/@newchannel'));
@@ -58,6 +79,19 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     assert.equal(await page.locator('#chanlume-toolbar').isVisible(), false);
     assert.equal(await page.locator('#chanlume-launcher, #chanlume-panel, #chanlume-backdrop').count(),0);
     assert.equal(await page.locator('#chanlume-guide-section .cl-guide-list [data-cl-group]').count(),24);
+    assert.equal(await page.locator('#chanlume-guide-section [data-cl-action=new-group]').count(),1);
+    assert.equal(await page.locator('.cl-category-add').count(),1);
+    await page.locator('.cl-category-add').click();
+    await page.locator('.cl-collection-editor [name=name]').fill('From Category Rail');
+    await page.locator('.cl-collection-editor button[type=submit]').click();
+    await page.waitForFunction(() => __getStoredState().groups.some(group=>group.name==='From Category Rail'));
+    await page.locator('#chanlume-guide-section [data-cl-action=new-group]').click();
+    await page.locator('.cl-collection-editor [name=name]').fill('From Guide');
+    await page.locator('.cl-collection-editor button[type=submit]').click();
+    await page.waitForFunction(() => __getStoredState().groups.some(group=>group.name==='From Guide'));
+    assert.equal(await page.locator('.cl-category-add').count(),0, 'collections view uses its dedicated add button');
+    await page.locator('#chanlume-guide-section [data-cl-action=subscriptions]').click();
+    await page.locator('.cl-category-add').waitFor();
     await selectScope(page,'group23');
     assert.match(page.url(), /chanlume-group=group23/);
     assert.equal(await page.locator('#chanlume-guide-section .cl-nav-settings').count(),1);

@@ -2,8 +2,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright'));
 (async()=>{
  const browser=await chromium.launch({channel:'msedge',headless:true});
- const scripts=['startup.js','dom.js'].map(name=>fs.readFileSync(`extension/content/${name}`,'utf8')).join('\n')+'\n'+fs.readFileSync('extension/shared.js','utf8')+'\n'+['favorites.js','recent.js','subscriptions.js','navigation.js','content.js'].map(name=>fs.readFileSync(`extension/content/${name}`,'utf8')).join('\n');
- const css=fs.readFileSync('extension/content/content.css','utf8')+'\n'+fs.readFileSync('extension/content/subscriptions.css','utf8');
+ const scripts=['startup.js','dom.js'].map(name=>fs.readFileSync(`extension/content/${name}`,'utf8')).join('\n')+'\n'+fs.readFileSync('extension/shared.js','utf8')+'\n'+['favorites.js','recent.js','subscriptions.js','home.js','watch.js','navigation.js','content.js'].map(name=>fs.readFileSync(`extension/content/${name}`,'utf8')).join('\n');
+ const css=['content.css','subscriptions.css','home.css','watch.css'].map(name=>fs.readFileSync(`extension/content/${name}`,'utf8')).join('\n');
  const html=`<!doctype html><html dark><head><style>${css}</style></head><body><div id="unrelated">Unrelated page content</div><ytd-guide-renderer><div id="sections"><div id="native-nav">Native guide</div></div></ytd-guide-renderer><ytd-browse page-subtype="subscriptions"><div id="primary"><div id="native-feed">Native feed</div></div></ytd-browse></body></html>`;
  const output='work/subscriptions-ui-20261020/startup';fs.mkdirSync(output,{recursive:true});
  try {
@@ -28,6 +28,7 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
     await page.locator('[data-shelf-input=channels]').fill('Studio');
     await page.evaluate(()=>{window.__held={guide:document.querySelector('[data-cl-action=collections]'),input:document.querySelector('[data-shelf-input=channels]'),channel:document.querySelector('.cl-shelf-channel')};__held.input.focus();__change();});
     await page.waitForFunction(()=>document.querySelector('#chanlume-guide-section').textContent.includes('renamed'));
+    assert.equal(await page.evaluate(()=>document.documentElement.classList.contains('chanlume-early-enabled')),false,'state revisions must never re-enable the boot mask');
     assert.equal(await page.evaluate(()=>__held.guide===document.querySelector('[data-cl-action=collections]')&&__held.input===document.querySelector('[data-shelf-input=channels]')&&__held.channel===document.querySelector('.cl-shelf-channel')&&document.activeElement===__held.input),true);
     await page.evaluate(()=>document.body.insertAdjacentHTML('beforeend','<ytd-mini-guide-renderer><div id="items"><a id="native-mini">Native mini</a></div></ytd-mini-guide-renderer>'));
     await page.locator('#chanlume-mini-guide').waitFor();
@@ -66,6 +67,26 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   assert.equal(await cold.locator('.cl-shelf-video strong').innerText(),'Loaded after cold Timeline entry');
   assert.equal(await cold.locator('#primary').evaluate(el=>el.classList.contains('chanlume-shelf-custom')),true,'custom Timeline takes over only after YouTube data arrives');
   assert.deepEqual(coldErrors,[]);await cold.close();
+  // Watch pages sometimes mount the guide only after the content script has
+  // finished. Native items must remain visible until a replacement exists.
+  const late=await browser.newPage(),lateErrors=[];late.on('pageerror',error=>lateErrors.push(error.message));
+  await late.route('http://127.0.0.1:18766/watch**',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html dark><head><style>${css}</style></head><body><main id="watch-player">Native watch player</main></body></html>`}));
+  await late.addInitScript(()=>{
+    const state={revision:1,settings:{enabled:true,language:'en',onboardingComplete:true},channels:{},groups:[]};
+    window.chrome={runtime:{onMessage:{addListener(){}},sendMessage:async()=>({ok:true})},storage:{local:{get:async()=>({chanlumeState:state})},onChanged:{addListener(){}}}};
+  });
+  await late.addInitScript({content:scripts});
+  await late.goto('http://127.0.0.1:18766/watch?v=late-guide');
+  await late.waitForFunction(()=>!document.documentElement.classList.contains('chanlume-startup-pending'));
+  assert.equal(await late.evaluate(()=>document.documentElement.classList.contains('chanlume-early-enabled')),false,'finish must remove the guide boot mask');
+  await late.evaluate(()=>ChanlumeStartup.sync(true));
+  assert.equal(await late.evaluate(()=>document.documentElement.classList.contains('chanlume-early-enabled')),false,'watch-page refresh must not restore boot hiding');
+  await late.evaluate(()=>document.body.insertAdjacentHTML('beforeend','<ytd-guide-renderer><div id="sections"><a id="late-native-guide" href="/feed/history">Native history</a></div></ytd-guide-renderer>'));
+  await late.waitForFunction(()=>Boolean(document.querySelector('#chanlume-guide-section')) || !document.querySelector('#late-native-guide'));
+  assert.equal(await late.locator('#chanlume-guide-section').count(),1,'late native guide should be enhanced');
+  assert.equal(await late.locator('#chanlume-guide-section').isVisible(),true,'the enhanced guide must remain visible');
+  assert.equal(await late.locator('#watch-player').isVisible(),true,'watch player should remain untouched');
+  assert.deepEqual(lateErrors,[]);await late.close();
   // Verify retained image identity and keyed reordering, including focus and open details.
   const page=await browser.newPage();await page.goto('http://127.0.0.1:18766/tests/shelf-harness.html');await page.locator('[data-shelf-input=view]').waitFor();
   await page.locator('[data-shelf-input=view]').selectOption('channels');
@@ -76,6 +97,6 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
    ChanlumeDom.patch(host,'<a href="/b">B updated</a><a href="/a"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></a><details><summary>Dates</summary><input value="two"></details>');
    return a===host.querySelectorAll('a')[1]&&img===host.querySelector('img')&&details===host.querySelector('details')&&details.open&&details.querySelector('input').value==='two';
   });assert.equal(stable,true);await page.close();
-  console.log('PASS startup: document-start pre-paint region gating, unrelated content visible, one state read, disabled restore, bounded failure restore, late hosts before paint, stable guide/input/channel/image identity, focus, keyed reorder and open details.');
+  console.log('PASS startup: document-start pre-paint gating, disabled restore, bounded failure restore, late Watch guide visibility, stable guide/input/channel/image identity, focus, keyed reorder and open details.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

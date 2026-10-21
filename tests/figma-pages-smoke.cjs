@@ -12,6 +12,13 @@ const {selectScope}=require('./navigation-actions.cjs');
   await page.route('https://i.ytimg.com/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#373246"/><circle cx="210" cy="175" r="130" fill="#8f729b"/><rect x="380" y="40" width="180" height="280" rx="40" fill="#b9a0aa"/></svg>'}));
   await page.goto('http://127.0.0.1:18766/tests/shelf-harness.html');await root.waitFor();
   await page.addStyleTag({content:'@media(min-width:801px){ytd-browse{margin-left:240px;margin-right:0}}'});
+  // The fixture injects this margin after first paint. Wait for the ResizeObserver
+  // to realign the body-mounted fixed tabs before checking their geometry.
+  await page.waitForFunction(() => {
+    const nav = document.querySelector('#chanlume-shelf-sticky')?.getBoundingClientRect();
+    const primary = document.querySelector('#primary')?.getBoundingClientRect();
+    return nav && primary && Math.abs(nav.left-primary.left)<2 && Math.abs(nav.width-primary.width)<2;
+  });
   assert.equal(await root.locator('[data-shelf-input=scope]').count(),0);
   assert.equal(await root.locator('.cl-category-chip').count(),5);
   assert.equal(await root.locator('.cl-category-chip[data-id=all]').getAttribute('aria-pressed'),'true');
@@ -38,7 +45,7 @@ const {selectScope}=require('./navigation-actions.cjs');
   await page.waitForFunction(()=>document.querySelector('#chanlume-category-slot .cl-category-rail')!==null);
   await root.locator('[data-shelf-input=view]').selectOption('timeline');
   await page.waitForFunction(()=>document.querySelectorAll('.cl-shelf-video').length===12);
-  assert.equal(await root.locator('.cl-time-sort button').count(),2);
+  assert.equal(await root.locator('.cl-time-sort,.cl-date-filter,[data-shelf-action=sort-newest],[data-shelf-action=sort-oldest]').count(),0);
   assert.equal(await root.locator('.cl-shelf-source-note,.cl-shelf-date-note').count(),0);
   assert.equal(await root.locator('.cl-shelf-body .cl-recent-status').count(),0);
   assert.equal(await root.locator('.cl-video-duration').count(),0);

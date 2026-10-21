@@ -10,6 +10,8 @@ function loadBackground(initialState, fetchImpl, rawStore) {
   let messageListener = null;
   let installListener = null;
   const openedTabs = [];
+  const refreshedTabs = [];
+  let extensionReloads = 0;
   const context = {
     console,
     setTimeout,
@@ -27,16 +29,29 @@ function loadBackground(initialState, fetchImpl, rawStore) {
           set: async (values) => {
             await new Promise((resolve) => setTimeout(resolve, 2));
             Object.assign(store, values);
-          }
+          },
+          remove: async (key) => { delete store[key]; }
         }
       },
       runtime: {
         onInstalled: { addListener: (listener) => { installListener = listener; } },
         getURL: (relative) => `chrome-extension://test-id/${relative}`,
         onMessage: { addListener: (listener) => { messageListener = listener; } },
+        reload: () => { extensionReloads += 1; },
         openOptionsPage: async () => {}
       },
-      tabs: { update: async () => ({}), create: async (options) => { openedTabs.push({ ...options, storedState: store.chanlumeState }); return { id: 1 }; }, remove: async () => {} },
+      tabs: {
+        update: async () => ({}),
+        create: async (options) => { openedTabs.push({ ...options, storedState: store.chanlumeState }); return { id: 1 }; },
+        remove: async () => {},
+        query: async () => [
+          { id: 10, url: "https://www.youtube.com/watch?v=active", active: true },
+          { id: 11, url: "https://www.youtube.com/feed/subscriptions#chanlume-group=all", active: false },
+          { id: 12, url: "https://www.youtube.com/watch?v=background", active: false },
+          { id: 13, url: "https://www.youtube.com/feed/channels", active: false }
+        ],
+        reload: async id => { refreshedTabs.push(id); }
+      },
       action: { setBadgeBackgroundColor: async () => {}, setBadgeText: async () => {} },
       i18n: { getUILanguage: () => "en" }
     }
@@ -47,6 +62,8 @@ function loadBackground(initialState, fetchImpl, rawStore) {
   return {
     store,
     openedTabs,
+    refreshedTabs,
+    get extensionReloads() { return extensionReloads; },
     install: (reason) => installListener({ reason }),
     send(message) {
       return new Promise((resolve, reject) => {
@@ -56,6 +73,47 @@ function loadBackground(initialState, fetchImpl, rawStore) {
     }
   };
 }
+
+test("development reload accepts only a fresh local marker and reloads appropriate tabs", async () => {
+  const revision = "c0a8210c-7d0b-4347-b15c-7d081daa1700";
+  let fresh = true;
+  const background = loadBackground(
+    { channels: { "/@one": { name: "One" } } },
+    async url => ({
+      ok: true,
+      json: async () => ({
+        chanlumeDevWatch: true,
+        revision,
+        updatedAt: fresh ? Date.now() : Date.now() - 120000
+      })
+    })
+  );
+  const observed = await background.send({ type: "CHANLUME_DEV_MARKER" });
+  assert.equal(observed.ok, true);
+  assert.equal(observed.marker?.revision, revision);
+  assert.equal(observed.marker?.chanlumeDevWatch, true);
+  assert.equal((await background.send({ type: "CHANLUME_DEV_RELOAD", revision: "wrong" })).ok, false);
+  assert.equal(background.extensionReloads, 0);
+  fresh = false;
+  assert.equal((await background.send({ type: "CHANLUME_DEV_MARKER" })).marker, null);
+  assert.equal((await background.send({ type: "CHANLUME_DEV_RELOAD", revision })).ok, false);
+  fresh = true;
+  const beforeChannels = JSON.stringify(background.store.chanlumeState.channels);
+  assert.equal((await background.send({ type: "CHANLUME_DEV_RELOAD", revision })).ok, true);
+  assert.equal(background.extensionReloads, 1);
+  assert.equal(background.store.chanlumeDevReloadPending.revision, revision);
+  assert.equal(JSON.stringify(background.store.chanlumeState.channels), beforeChannels);
+  await background.install("update");
+  assert.deepEqual(background.refreshedTabs, [10, 11, 13]);
+  assert.equal(background.store.chanlumeDevReloadPending, undefined);
+});
+
+test("ordinary updates never reload users' YouTube tabs without an explicit dev marker", async () => {
+  const background = loadBackground({});
+  await background.install("update");
+  assert.deepEqual(background.refreshedTabs, []);
+  assert.equal(background.extensionReloads, 0);
+});
 
 test("recent channel feeds work for non-favorites, verify owner, exclude Shorts and join exact Atom dates without writes", async () => {
   const owner='UCabcdefghijklmnopqrstuv';

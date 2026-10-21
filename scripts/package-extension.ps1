@@ -5,6 +5,10 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $source = Join-Path $projectRoot 'extension'
 $mirror = Join-Path $projectRoot 'outputs\extension'
+$devMarker = Get-Content -LiteralPath (Join-Path $source 'dev-reload.json') -Raw | ConvertFrom-Json
+if ($devMarker.chanlumeDevWatch -eq $true) {
+  throw 'Stop scripts/dev-watch.ps1 before packaging; an enabled developer reload marker must never ship.'
+}
 $version = (Get-Content -LiteralPath (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json).version
 $archivePath = Join-Path $projectRoot ("outputs\Chanlume-$version.zip")
 if (Test-Path -LiteralPath $archivePath) { throw "Version package already exists: $archivePath" }

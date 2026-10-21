@@ -37,15 +37,14 @@
     "排序": "Sort",
     "時間軸": "Timeline", "搜尋訂閱頻道": "Search subscriptions", "內容範圍": "Scope",
     "名冊順序": "Library order", "頻道名稱": "Channel name", "來源順序": "Source order",
-    "最新日期": "Newest date", "最舊日期": "Oldest date", "日期範圍": "Date range",
-    "起始日期": "From", "結束日期": "To", "清除日期": "Clear dates", "返回群組收藏": "Back to collections",
+    "返回群組收藏": "Back to collections",
     "頻道來自已同步名冊；展開後顯示目前已載入的影片。": "Your synced channel library. Expand a channel to see its loaded videos.",
     "此頻道的影片尚未載入，不代表沒有更新。": "Videos from this channel are not loaded yet. It may have newer content.",
     "此頻道尚未出現在已載入的訂閱動態中，往下捲動可繼續尋找較舊的影片。": "This channel has not appeared in the loaded subscription feed yet. Scroll down to find older videos.",
     "目前載入的影片中沒有符合的內容": "No matching videos in the loaded feed",
     "正在載入 YouTube 訂閱影片…": "Loading YouTube subscription videos…",
     "往下捲動，YouTube 會繼續載入更舊的訂閱影片。": "Scroll down to let YouTube load older subscription videos.",
-    "近期影片": "Recent videos", "直播中": "Live now",
+    "近期影片": "Recent videos", "直播中": "Live now", "影片資訊": "Video information",
     "找不到符合的頻道": "No matching channels", "此範圍尚無頻道": "No channels in this scope",
     "可更新訂閱名冊，或調整搜尋及群組範圍。": "Update subscriptions, or adjust your search and scope.",
     "未提供確切日期": "Exact date unavailable",
@@ -1286,6 +1285,18 @@
         next.groups.push({ id: createId(name, next.groups.map((item) => item.id)), ...values, channelIds: [] });
       }
       return normalizeState(next);
+    }
+    if (type === "create-group-for-channel") {
+      // A channel-page creation is one background-owned transaction: creating
+      // the group and filing its channel must never result in a half-save.
+      const channelId = resolveChannelRecordId(current, payload.channelId);
+      if (!channelId) throw new Error("Unknown subscribed channel");
+      const name = String(payload.name || "").trim().slice(0, 40);
+      if (!name) throw new Error("Group name is required");
+      const id = createId(name, current.groups.map((item) => item.id));
+      const color = /^#[0-9a-f]{6}$/i.test(payload.color || "") ? payload.color : "#7c5cff";
+      current.groups.push({ id, name, icon: "star", color, channelIds: [channelId] });
+      return normalizeState(current);
     }
     if (type === "merge-groups") {
       const sourceGroupId = String(payload.sourceGroupId || "");

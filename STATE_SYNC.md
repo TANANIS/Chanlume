@@ -4,6 +4,8 @@
 
 `chrome.storage.local.chanlumeState` is the durable source of truth. The background service worker is its only writer. Dashboard, popup, and YouTube content scripts may read state, but must never call `chrome.storage.local.set()` for `chanlumeState`.
 
+The optional local development watcher is independent of this durable state: `extension/dev-reload.json` is a short-lived source-change heartbeat, and `chanlumeDevReloadPending` is a transient `chrome.storage.local` key used only to refresh the proper YouTube tabs after `chrome.runtime.reload()`. Neither is a channel/subscription record or a general-purpose state mutation. The pending key is cleared at the reload boundary; no personal data leaves the browser. Release packaging refuses an active watcher marker.
+
 ## Rename compatibility (1.19.3)
 
 The background's serialized task queue copies missing `chanlumeState`, `chanlumeYouTubeApiKey` and `chanlumeScanStatus` values from the legacy `tubeShelfState`, `tubeShelfYouTubeApiKey` and `tubeShelfScanStatus` keys before performing a state task. Existing new keys always win, including empty credentials or a reset library. Legacy copies are retained for recovery and are never written again. Frontends use read-only fallback while migration is pending. Update normalization advances revision without opening onboarding or resetting data.
@@ -89,11 +91,15 @@ The scan-page Main-world bridge reads `browseId` and `canonicalBaseUrl` from the
 
 Collections reads the existing groups/channels. Create/rename sends `save-group`; the member dialog records only touched IDs and sends one `edit-memberships` delta. Cancel writes nothing. Failed commits retain the draft; incoming revisions do not replace draft choices. No new state schema, direct storage writer, remote feed service or watching history is introduced.
 
-All/Feed/grid keeps YouTube's native cards. Since 1.23.0, Feed (including group-filtered Feed), Timeline, and Channels' video previews read only **currently loaded native subscription cards**; they do not request public video feeds per channel. Channels' directory itself still uses the complete synchronized local channel map. No view claims a complete video archive. Presentation options such as view, layout, sort, scope, search and date range live in the URL hash; disclosure state is temporary UI state. Native source nodes are not moved or cloned with event bindings. Leaving the route or disabling removes custom hiding/search classes and UI. The existing scheduler remains the shared DOM refresh path; the page module adds no observers, and generated module UI is excluded from observation work.
+All/Feed/grid keeps YouTube's native cards. Since 1.23.0, Feed (including group-filtered Feed), Timeline, and Channels' video previews read only **currently loaded native subscription cards**; they do not request public video feeds per channel. Channels' directory itself still uses the complete synchronized local channel map. No view claims a complete video archive. Presentation options such as view, layout, directory-name sort, scope and search live in the URL hash; disclosure state is temporary UI state. Timeline automatically orders loaded videos newest-first from YouTube metadata; the former Newest date, Oldest date and Date range controls are removed. Old `sort=oldest|newest`, `from` and `to` hash parameters are ignored and cleaned on entering Subscriptions. Native source nodes are not moved or cloned with event bindings. Leaving the route or disabling removes custom hiding/search classes and UI. The existing scheduler remains the shared DOM refresh path; the page module adds no observers, and generated module UI is excluded from observation work.
 
 Each frontend keeps a read-only in-memory cache. A committed state may arrive through the mutation response or `chrome.storage.onChanged`; the frontend accepts it only when its `revision` is newer than the cached revision. The first accepted copy renders the UI and a duplicate copy is ignored.
 
 YouTube SPA navigation is separate from state synchronization. Page navigation reapplies controls and card filters from the current cache. Subscription group selection is mirrored to `#chanlume-group=...` and reparsed after navigation or hash changes.
+
+### Watch-page Figma phase 01 (local, unreleased)
+
+`content/watch.js` and `watch.css` handle **only** `/watch`, independently of the Subscriptions page's native-feed data pipeline. When both native `ytd-watch-info-text #view-count` and `#date-text` expose accessible `aria-label` values, the adapter presents those exact labels with eye/calendar indicators in `ytd-watch-metadata #top-row`. YouTube's original title, player, owner/subscription UI and action buttons remain mounted with their own handlers; only the duplicate facts in the description are visually hidden. Publication ages are not converted to calendar dates, and numbers are never parsed from the animated rolling-digit text. A page-scoped observer follows asynchronous native fact changes, including labels arriving after the container; it disconnects when navigating away or turning off Chanlume. If native evidence disappears, the native description facts are revealed again. This is read-only presentation: no new permission, state operation, history cache, host request or storage write. The later Figma suggestions/transcript/live-chat and comment-search concepts are not part of phase 01.
 
 ## Long-running metadata work
 
@@ -117,7 +123,7 @@ Presentation parameters live in the hash (`chanlume-view`, `chanlume-group`, `la
 
 ### Early rendering lifecycle (1.21.1)
 
-startup.js reads new/legacy state once at document_start; the main adapter awaits that same promise. It does not write state or create a persistence cache. Content initialization waits for body while state is read concurrently. Narrow startup gates reserve only enhanced surfaces, and disabled/error/watchdog paths reveal native content. The shared DOM reconciler updates presentation in place without changing the background authority, semantic mutation protocol, or durable schema. Microtask refreshes bail out while disabled or hidden.
+startup.js reads new/legacy state once at document_start; the main adapter awaits that same promise. It does not write state or create a persistence cache. Content initialization waits for body while state is read concurrently. Narrow startup gates reserve only enhanced surfaces, and disabled/error/watchdog paths reveal native content. **On successful initialization, the startup guide mask must be removed permanently; subsequent enabled-state syncs must not reactivate it.** This permits native guide entries to remain visible when YouTube mounts them later than the Chanlume integration. The shared DOM reconciler updates presentation in place without changing the background authority, semantic mutation protocol, or durable schema. Microtask refreshes bail out while disabled or hidden.
 
 ### Recent channel content (1.22.0)
 

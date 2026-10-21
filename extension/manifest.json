@@ -37,8 +37,8 @@
     },
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["content/startup.js", "content/dom.js", "shared.js", "content/favorites.js", "content/subscriptions.js", "content/navigation.js", "content/content.js"],
-      "css": ["content/content.css", "content/subscriptions.css"],
+      "js": ["content/startup.js", "content/dom.js", "shared.js", "content/favorites.js", "content/subscriptions.js", "content/home.js", "content/watch.js", "content/navigation.js", "content/content.js", "content/dev-reload.js"],
+      "css": ["content/content.css", "content/subscriptions.css", "content/home.css", "content/watch.css"],
       "run_at": "document_start"
     }
   ]

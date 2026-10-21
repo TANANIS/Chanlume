@@ -111,6 +111,16 @@ return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${s
       globalThis.ChanlumeDom.patch(guide, sidebarMarkup());
       localizeExtensionUi(guide);
     }
+    const heading = guide?.querySelector(".cl-guide-heading");
+    if (heading && !heading.querySelector('[data-cl-action="new-group"]')) {
+      const add = document.createElement("button");
+      add.type = "button";
+      add.className = "cl-guide-new-group";
+      add.dataset.clAction = "new-group";
+      add.textContent = "＋";
+      add.title = add.ariaLabel = Core.translateUiText("新增群組", currentLanguage());
+      heading.querySelector(".cl-guide-toggle")?.before(add);
+    }
     const mini = document.getElementById('chanlume-mini-guide');
     if (mini && mini.dataset.signature !== signature) {
       mini.dataset.signature = signature;
@@ -157,6 +167,7 @@ return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${s
     if (action === 'toggle-channels') { channelsExpanded = !channelsExpanded; renderIntegratedControls(); return; }
     if (action === 'toggle-explore') { exploreExpanded = !exploreExpanded; renderIntegratedControls(); return; }
     if (action === "collections") { subscriptions.navigateCollections(); return; }
+    if (action === "new-group") { subscriptions.navigateNewGroup(); return; }
     if (action === "find-group") { document.querySelector('#chanlume-toolbar dialog')?.showModal(); return; }
     if (action === "close-picker") { document.querySelector('#chanlume-toolbar dialog')?.close(); return; }
     if (action === "scroll-left" || action === "scroll-right") {

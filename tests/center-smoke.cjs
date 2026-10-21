@@ -46,17 +46,17 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   await input('view').selectOption('timeline');
   await page.waitForFunction(()=>document.querySelectorAll('.cl-timeline-day').length===11);
   assert.deepEqual((await page.locator('.cl-timeline-day h2').allInnerTexts()).slice(0,4),['2026-10-20','2026-10-19','4 days ago','5 days ago']);
-  await page.locator('.cl-date-filter summary').click();await input('from').fill('2026-10-19');
-  await input('from').press('Tab');
-  assert.equal(await input('to').isVisible(),true);await input('to').fill('2026-10-19');await input('to').press('Tab');
-  await page.waitForFunction(()=>document.querySelectorAll('.cl-shelf-video').length===2);
-  assert.equal(await page.locator('.cl-timeline-day').count(),1);
-  assert.equal(await input('from').isVisible(),true);await action('clear-dates').click();
-  await action('sort-oldest').click();
-  assert.equal(await page.locator('.cl-timeline-day h2').first().innerText(),'12 days ago');
-  assert.equal(await page.locator('.cl-timeline-day h2').last().innerText(),'2026-10-20');
-  await action('sort-newest').click();await action('grid').click();
+  assert.equal(await page.locator('.cl-date-filter,.cl-time-sort,[data-shelf-input=from],[data-shelf-input=to],[data-shelf-action=sort-newest],[data-shelf-action=sort-oldest]').count(),0);
+  await action('grid').click();
   await page.screenshot({path:`${output}/timeline-dark.png`});
+  await page.evaluate(()=>{
+   const url=new URL(location.href),params=new URLSearchParams(url.hash.slice(1));
+   params.set('sort','oldest');params.set('from','2026-10-19');params.set('to','2026-10-19');
+   url.hash=params.toString();history.replaceState(history.state,'',url);
+  });
+  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.cl-shelf-video').length===12);
+  assert.equal(await page.evaluate(()=>['sort','from','to'].some(key=>new URLSearchParams(location.hash.slice(1)).has(key))),false);
+  assert.equal(await page.locator('.cl-timeline-day h2').first().innerText(),'1 days ago');
   await input('view').selectOption('channels');await action('list').click();
   await page.screenshot({path:`${output}/channels-list-dark.png`});
   await action('collections').click();assert.equal(await page.locator('.cl-members-list').count(),3);await action('grid').click();await page.screenshot({path:`${output}/collections-dark.png`});
@@ -68,6 +68,6 @@ const {chromium}=require(path.join(process.env.CHANLUME_NODE_MODULES,'playwright
   assert.equal(await page.locator('.cl-design-icon').evaluateAll(imgs=>imgs.filter(i=>i.getClientRects().length).every(i=>i.complete && i.naturalWidth===24 && i.getBoundingClientRect().width===24 && i.getBoundingClientRect().height===24)),true);
   assert.equal(await page.evaluate(()=>__operations.length),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS center: full synced directory without loaded videos, scoped membership, independent layouts, durable query/reload, history, collection collapse, exact dates/invalid dates/unknown dates, date range and order, icons, dark/light/mobile. No data writes.');
+  console.log('PASS center: full synced directory without loaded videos, scoped membership, independent layouts, durable query/reload, history, collection collapse, exact dates/invalid dates/unknown dates, automatic timeline order, retired date controls/hash, icons, dark/light/mobile. No data writes.');
  } catch(e) {console.log(page.url(),(await page.locator('body').innerText()).slice(0,2400),errors);throw e;} finally {await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

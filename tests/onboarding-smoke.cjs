@@ -2,6 +2,16 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playwright'));
+async function capture(page, file) {
+  try { await page.screenshot({ path: file, fullPage: true }); }
+  catch (error) {
+    // On Windows, an existing evidence PNG may be temporarily held by a viewer.
+    // Keep testing the actual page; still demand a valid in-memory screenshot.
+    if (!['UNKNOWN', 'EBUSY', 'EPERM'].includes(error.code)) throw error;
+    const png = await page.screenshot({ fullPage: true });
+    assert.ok(png.length > 100);
+  }
+}
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   try {
@@ -40,11 +50,11 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
       assert.equal(await page.locator('#library-view').isVisible(), false);
       assert.equal(await page.locator('.page-header h1').innerText(), locale === 'zh-TW' ? '偏好設定' : 'Preferences');
       assert.equal(await page.locator('#onboarding-title').innerText(), locale === 'zh-TW' ? '歡迎使用 Chanlume' : 'Welcome to Chanlume');
-      await page.screenshot({ path: `work/first-install-${locale}.png`, fullPage: true });
+      await capture(page, `work/first-install-${locale}.png`);
       await page.locator('#onboarding [data-open-templates]').click();
       await page.locator('#template-options input[value="science"]').check();
       await page.locator('#template-options input[value="game-development"]').check();
-      await page.screenshot({path:`work/group-templates-${locale}.png`,fullPage:true});
+      await capture(page, `work/group-templates-${locale}.png`);
       await page.locator('#template-apply').click();
       await page.locator('#template-dialog').waitFor({state:'hidden'});
       assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('onboarding-fixture')).groups.length),4);

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en" dark><head><meta charset="utf-8"><base href="/">
-<link rel="stylesheet" href="/extension/content/content.css"><link rel="stylesheet" href="/extension/content/subscriptions.css">
+<link rel="stylesheet" href="/extension/content/content.css"><link rel="stylesheet" href="/extension/content/subscriptions.css"><link rel="stylesheet" href="/extension/content/home.css"><link rel="stylesheet" href="/extension/content/watch.css">
 <style>
 body { margin:0; font:14px Arial,sans-serif; background:#0f0f0f; color:#f1f1f1; }
 html:not([dark]) body { background:#fff; color:#0f0f0f; }
@@ -42,5 +42,5 @@ const titles=['Designing a quieter digital space','The beauty of everyday detail
 window.__addVideo=(index,title)=>{const card=document.createElement('ytd-rich-item-renderer');card.innerHTML=`<yt-lockup-view-model><a id="thumbnail" href="/watch?v=demo${String(index).padStart(7,'0')}"><img alt="" src="https://i.ytimg.com/vi/demo${String(index).padStart(7,'0')}/mqdefault.jpg"></a><yt-lockup-metadata-view-model><h3><a id="video-title" href="/watch?v=demo${String(index).padStart(7,'0')}">${title}</a></h3><yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow"><a id="channel-name" href="/@demo${index%12}">${names[index%12]}</a></div><div class="ytContentMetadataViewModelMetadataRow">${12+index*7}K views · ${index+1} days ago</div></yt-content-metadata-view-model></yt-lockup-metadata-view-model></yt-lockup-view-model>`;document.querySelector('#native-feed').append(card);return card};
 titles.forEach((title,i)=>__addVideo(i,title));
 </script>
-<script src="/extension/content/dom.js"></script><script src="/extension/content/favorites.js"></script><script src="/extension/content/recent.js"></script><script src="/extension/content/subscriptions.js"></script><script src="/extension/content/navigation.js"></script><script src="/extension/content/content.js"></script>
+<script src="/extension/content/dom.js"></script><script src="/extension/content/favorites.js"></script><script src="/extension/content/recent.js"></script><script src="/extension/content/subscriptions.js"></script><script src="/extension/content/home.js"></script><script src="/extension/content/watch.js"></script><script src="/extension/content/navigation.js"></script><script src="/extension/content/content.js"></script>
 </body></html>

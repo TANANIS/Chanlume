@@ -29,8 +29,24 @@
   }).catch(() => { expired = true; release(); return undefined; });
   globalThis.ChanlumeStartup = {
     state,
-    sync(value) { enabled = value; if (!value) release(); else if (!expired) { root()?.classList.add("chanlume-early-enabled"); route(); } },
-    finish() { finished = true; clearTimeout(watchdog); observer.disconnect(); root()?.classList.remove("chanlume-startup-pending", "chanlume-content-pending", "chanlume-early-custom"); },
+    sync(value) {
+      enabled = value;
+      if (!value) release();
+      else if (!expired && !finished) { root()?.classList.add("chanlume-early-enabled"); route(); }
+      else if (finished) {
+        // Later state/DOM refreshes must not reactivate the startup mask.
+        root()?.classList.remove("chanlume-early-enabled", "chanlume-early-custom");
+        route();
+      }
+    },
+    finish() {
+      finished = true;
+      clearTimeout(watchdog);
+      observer.disconnect();
+      // The early guide mask is only for bootstrapping. Keeping it after
+      // initialization hides native entries when YouTube mounts its guide late.
+      root()?.classList.remove("chanlume-startup-pending", "chanlume-content-pending", "chanlume-early-enabled", "chanlume-early-custom");
+    },
     release
   };
   document.addEventListener("yt-navigate-start", route);

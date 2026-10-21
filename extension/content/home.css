@@ -1,0 +1,6 @@
+/* Styling only: YouTube retains every native Home card and its original order. */
+html.chanlume-home-layout ytd-rich-grid-renderer ytd-thumbnail,
+html.chanlume-home-layout ytd-rich-grid-renderer yt-thumbnail-view-model { overflow: hidden; border-radius: 15px; }
+html.chanlume-home-layout ytd-feed-filter-chip-bar-renderer yt-chip-cloud-chip-renderer .ytChipShapeChip {
+  border-radius: 10px; transition: background-color 130ms ease;
+}

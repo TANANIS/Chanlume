@@ -57,6 +57,22 @@ test("saved selection deltas retain concurrent edits and do not resurrect delete
   assert.throws(() => Core.applyStateOperation(state, { type: "edit-memberships", payload: { groupId: "gone", changes: [] } }), /Unknown group/);
 });
 
+test("channel-page group creation is atomic, preserves existing groups and requires a subscribed channel", () => {
+  const source = Core.normalizeState({ channels: { "/@one": { name: "One" } }, groups: [{ id: "learning", name: "Learning", channelIds: ["/@one"] }], favoriteChannelIds: ["/@one"] });
+  const operation = { type: "create-group-for-channel", payload: { channelId: "/@one", name: "Learning", color: "#0088ff" } };
+  const result = Core.applyStateOperation(source, operation);
+  const created = result.groups.find(group => group.id !== "learning");
+  assert.ok(created && created.id !== "learning");
+  assert.equal(created.name, "Learning");
+  assert.equal(created.color, "#0088ff");
+  assert.deepEqual(created.channelIds, ["/@one"]);
+  assert.deepEqual(result.groups.find(group => group.id === "learning").channelIds, ["/@one"]);
+  assert.deepEqual(result.favoriteChannelIds, ["/@one"]);
+  assert.deepEqual(source.groups.map(group => group.id), ["learning"], "input state remains unchanged");
+  assert.throws(() => Core.applyStateOperation(source, { ...operation, payload: { ...operation.payload, channelId: "/@absent" } }), /Unknown subscribed channel/);
+  assert.throws(() => Core.applyStateOperation(source, { ...operation, payload: { ...operation.payload, name: "  " } }), /Group name is required/);
+});
+
 test("favorite selection follows strongly coalesced channel identities", () => {
   const state = Core.normalizeState({ channels: { "/@one": { name: "One" }, "/channel/ucabc": { name: "One" } }, favoriteChannelIds: ["/channel/ucabc"] });
   const next = Core.coalesceChannelIdentities(state, { id: "/@one", url: "https://www.youtube.com/@one" }, ["/channel/ucabc"]);
