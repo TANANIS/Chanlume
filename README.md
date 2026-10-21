@@ -1,5 +1,7 @@
 # Chanlume
 
+> **Security notice (2026-10-21): Chanlume 1.24.0 download temporarily withdrawn.** Microsoft Defender detected `Trojan:Script/Ulthar.A!ml` in the 1.24.0 ZIP's `background.js` and also blocked the local production copy. This may be a false positive: compared with 1.23.3, the production background script has only whitespace differences, but safety has **not** been independently confirmed. Do not bypass antivirus warnings or upload/install the affected ZIP until this has been reviewed. The version tag is retained for investigation.
+
 > **2026-10-21 sidebar refinement (main):** Collections, Subscriptions, Distraction settings and Chanlume settings now use a single 46px row rhythm and the same SVG chevron. The Chanlume settings trigger remains at the bottom of the expanded YouTube guide; opening it shows settings above the trigger while the independent main navigation scrolls in the remaining space. On a desktop with a fine mouse pointer, hovering within the left mini-guide edge briefly opens YouTube's native guide; moving into the page closes only the drawer opened by hover. A manually opened guide is never auto-closed. These changes are frontend-only and keep the native guide button, keyboard access, and saved library untouched.
 
 > **2026-10-21 UI follow-up (source on main):** The left guide has consistent disclosure row sizing and no extra group-create + button. The Subscriptions category rail also has no create button; group creation remains in Collections and channel classification. Watch view/date metadata now has its own compact row below the original owner/actions controls, and transcript search controls are hidden without hiding native captions. The subscription View selector uses a styled, keyboard-accessible disclosure rather than the browser's native popup. This supersedes the earlier note below describing + buttons in the rail/sidebar; that earlier passage documents the previous implementation, not today's UI. No user library migration or additional permissions are involved.
@@ -39,9 +41,9 @@ The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, incl
 
 ## Download & install
 
-**[Download Chanlume 1.24.0](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.0.zip)** · [Source tag v1.24.0](https://github.com/TANANIS/Chanlume/tree/v1.24.0)
+**Chanlume 1.24.0 download is temporarily unavailable pending investigation.** [Source tag v1.24.0 (historical reference only)](https://github.com/TANANIS/Chanlume/tree/v1.24.0)
 
-**Chrome Web Store status:** 1.24.0 is prepared for developer-console upload; a GitHub package is not proof of Store submission, approval or publication.
+**Chrome Web Store status:** do not submit the flagged 1.24.0 ZIP while the security detection is unresolved. It has not been submitted, approved or published.
 
 Version 1.24.0 ZIP SHA-256: `71212c6cef1756b95e02e6c1a6e6656a6daacabf6515e598f4e3f15ba4cca325`.
 
@@ -97,9 +99,9 @@ Historical 1.19.4 package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec426389
 
 The currently published extension is available from the [Chrome Web Store](https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole?utm_source=item-share-cb).
 
-For manual installation:
+Manual installation from the 1.24.0 ZIP is paused while its Defender detection is being investigated. Do not override Windows security warnings. Once a verified package is available, the usual steps are:
 
-1. Download `Chanlume-1.24.0.zip` from the download link above.
+1. Download the verified ZIP from the release's current download link.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.
