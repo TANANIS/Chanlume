@@ -13,10 +13,10 @@ const {chromium} = require(path.join(process.env.CHANLUME_NODE_MODULES,'playwrig
   await page.locator('#chanlume-subscriptions-page').waitFor();
   const toggle=page.locator('#chanlume-guide-section .cl-guide-toggle');
   assert.equal(await toggle.getAttribute('aria-expanded'),'false');
-  assert.equal(await toggle.locator('span').evaluate(el=>getComputedStyle(el).transform),'none');
+  assert.equal(await toggle.locator('svg.cl-nav-chevron').evaluate(el=>getComputedStyle(el).transform),'none');
   await toggle.click();
   assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.cl-guide-toggle span')).transform==='matrix(-1, 0, 0, -1, 0, 0)');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.cl-guide-toggle svg.cl-nav-chevron')).transform==='matrix(-1, 0, 0, -1, 0, 0)');
   const disclosure=page.locator('[data-cl-action=toggle-channels]');
   await disclosure.click();assert.equal(await disclosure.getAttribute('aria-label'),'Collapse subscribed channels');
   await page.evaluate(()=>{

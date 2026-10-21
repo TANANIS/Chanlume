@@ -1,5 +1,7 @@
 # Chanlume
 
+> **2026-10-21 sidebar refinement (main):** Collections, Subscriptions, Distraction settings and Chanlume settings now use a single 46px row rhythm and the same SVG chevron. The Chanlume settings trigger remains at the bottom of the expanded YouTube guide; opening it shows settings above the trigger while the independent main navigation scrolls in the remaining space. On a desktop with a fine mouse pointer, hovering within the left mini-guide edge briefly opens YouTube's native guide; moving into the page closes only the drawer opened by hover. A manually opened guide is never auto-closed. These changes are frontend-only and keep the native guide button, keyboard access, and saved library untouched.
+
 > **2026-10-21 UI follow-up (source on main):** The left guide has consistent disclosure row sizing and no extra group-create + button. The Subscriptions category rail also has no create button; group creation remains in Collections and channel classification. Watch view/date metadata now has its own compact row below the original owner/actions controls, and transcript search controls are hidden without hiding native captions. The subscription View selector uses a styled, keyboard-accessible disclosure rather than the browser's native popup. This supersedes the earlier note below describing + buttons in the rail/sidebar; that earlier passage documents the previous implementation, not today's UI. No user library migration or additional permissions are involved.
 
 <p align="center">

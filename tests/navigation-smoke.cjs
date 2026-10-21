@@ -17,8 +17,62 @@ const { chromium } = require(path.join(process.env.CHANLUME_NODE_MODULES, 'playw
     assert.equal(await guide.locator('a[href="/"]').count(),1);
     assert.equal(await guide.locator('a[href="/shorts/"]').count(),0);
     assert.equal(await guide.locator('[data-cl-action=subscriptions]').getAttribute('aria-current'),'page');
+    // Edge hover must delegate to YouTube's native drawer, then close only
+    // the drawer that Chanlume opened. It must not hijack a manually opened one.
+    await page.evaluate(()=>{
+      const app=document.createElement('ytd-app');app.id='hover-fixture-app';
+      app.innerHTML='<div id="guide" style="visibility:hidden"><div id="guide-wrapper" style="position:fixed;left:0;top:56px;width:240px;height:500px"></div></div>';
+      document.body.append(app);
+      const mast=document.createElement('ytd-masthead');mast.id='hover-fixture-mast';
+      mast.innerHTML='<div id="guide-button"><button aria-label="Guide">Guide</button></div>';
+      document.body.append(mast);
+      window.__drawerToggles=0;
+      mast.querySelector('button').addEventListener('click',()=>{
+        const drawer=app.querySelector('#guide');
+        drawer.style.visibility=drawer.style.visibility==='visible'?'hidden':'visible';
+        window.__drawerToggles++;
+      });
+    });
+    await page.mouse.move(30,120);
+    await page.waitForFunction(()=>window.__drawerToggles===1);
+    assert.equal(await page.locator('#hover-fixture-app #guide').evaluate(e=>getComputedStyle(e).visibility),'visible');
+    await page.mouse.move(400,120);
+    await page.waitForFunction(()=>window.__drawerToggles===2);
+    // The stub button is behind the fixed fixture guide; invoke the stub's
+    // native-click handler without introducing a forced pointer click.
+    await page.evaluate(()=>document.querySelector('#hover-fixture-mast button').click());
+    await page.mouse.move(400,150);
+    await page.waitForTimeout(600);
+    assert.equal(await page.evaluate(()=>window.__drawerToggles),3,'manually opened drawers must not auto-close');
+    await page.evaluate(()=>{document.querySelector('#hover-fixture-app')?.remove();document.querySelector('#hover-fixture-mast')?.remove();});
+    await page.mouse.move(500,150);
     await guide.locator('.cl-nav-settings > summary').click();
     await guide.locator('.cl-nav-distractions > summary').click();
+    const geometry=await guide.evaluate(root=>{
+      const box=selector=>root.querySelector(selector).getBoundingClientRect();
+      const rects=[
+        box('.cl-guide-heading'),box('.cl-nav-heading'),
+        box('.cl-nav-settings > summary'),box('.cl-nav-distractions > summary')
+      ];
+      const arrows=[
+        root.querySelector('.cl-guide-toggle .cl-nav-chevron'),
+        root.querySelector('.cl-nav-disclosure .cl-nav-chevron'),
+        root.querySelector('.cl-nav-settings > summary > .cl-nav-chevron'),
+        root.querySelector('.cl-nav-distractions > summary > .cl-nav-chevron')
+      ];
+      const paths=arrows.map(svg=>svg.querySelector('path').getBoundingClientRect().width);
+      return {rows:rects.map(r=>r.height),paths,
+        main:root.querySelector('.cl-nav-main').getBoundingClientRect().toJSON(),
+        footer:root.querySelector('.cl-nav-footer').getBoundingClientRect().toJSON(),
+        summary:box('.cl-nav-settings > summary').toJSON(),height:innerHeight,
+        scroll:getComputedStyle(root.querySelector('.cl-nav-main')).overflowY};
+    });
+    assert.equal(geometry.rows.every(height=>Math.abs(height-46)<1),true, 'disclosure rows must share a 46px track');
+    assert.equal(geometry.paths.every(width=>Math.abs(width-geometry.paths[0])<1),true,'four arrows share the same rendered path size');
+    assert.equal(geometry.scroll,'auto','only the main navigation scrolls');
+    assert.equal(geometry.main.bottom<=geometry.footer.top+1,true,'docked settings cannot overlap the main navigation');
+    assert.equal(Math.abs(geometry.summary.bottom-geometry.footer.bottom)<12,true,'Chanlume summary stays at the bottom when expanded');
+    assert.equal(geometry.footer.bottom<=geometry.height+1,true,'docked summary must stay inside the viewport');
     const switches=guide.locator('.cl-nav-switch');
     assert.equal(await switches.count(),5);
     assert.equal(await switches.evaluateAll(items=>items.every(button=>button.getAttribute('role')==='switch'&&button.getAttribute('aria-label'))),true);

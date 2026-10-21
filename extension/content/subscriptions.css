@@ -320,10 +320,7 @@ html.chanlume-shelf-feed ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row:
 .cl-channel-subscribed { font-size: 13px; color: var(--cl-muted); border-radius: 32px; padding: 6px 18px; background: var(--cl-soft); white-space: nowrap; }
 @media(max-width: 700px) { .cl-directory-grid .cl-channel-subscribed { display: none; } .cl-directory-list .cl-channel-subscribed { padding: 5px 8px; } }
 
-#chanlume-guide-section .cl-nav-settings { color: var(--cl-muted); font-size: 14px; margin-top: 10px; }
-#chanlume-guide-section .cl-nav-settings > summary { display: flex; align-items: center; gap: 14px; min-height: 46px; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; cursor: pointer; list-style: none; font: 500 14px/1.4 Roboto, Arial, sans-serif; }
-#chanlume-guide-section .cl-nav-settings > summary::-webkit-details-marker { display: none; }
-#chanlume-guide-section .cl-nav-settings > summary:hover { background: var(--cl-soft); }
+/* Side-guide disclosure sizing lives in content.css, not a second selector set. */
 
 .cl-collection:first-child { padding-top: 0; }
 .cl-collection { padding-bottom: 60px; }

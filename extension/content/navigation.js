@@ -6,8 +6,64 @@
       openSubscriptionGroup, escapeHtml, localizeExtensionUi, currentLanguage,
       unfiledChannelIds, changeSetting, startSubscriptionUpdate, toast } = context;
     let state, activeGroupId, guideCollapsed = true, channelsExpanded = false, exploreExpanded = false;
+    let edgeTimer = null, leaveTimer = null, hoverOpened = false, pointerX = Infinity, pointerY = Infinity;
+    const disclosure = () => '<svg class="cl-nav-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" /></svg>';
     const label = (text) => escapeHtml(Core.translateUiText(text, currentLanguage()));
     const glyph = name => ({chevron:1,home:1,explore:1,shorts:1,history:1,clock:1,heart:1,playlists:1,collections:1,subscriptions:1,settings:1})[name] ? globalThis.chanlumeDesignIcon(name) : Core.iconSvg(name,"currentColor",24);
+    const clearEdgeTimer = () => { clearTimeout(edgeTimer); edgeTimer = null; };
+    const clearLeaveTimer = () => { clearTimeout(leaveTimer); leaveTimer = null; };
+    const nativeDrawer = () => document.querySelector("ytd-app #guide");
+    const guideOpen = () => {
+      const drawer = nativeDrawer();
+      const wrapper = drawer?.querySelector("#guide-wrapper");
+      return Boolean(drawer && wrapper && getComputedStyle(drawer).visibility === "visible" &&
+        getComputedStyle(wrapper).visibility === "visible" && wrapper.getBoundingClientRect().right > 140);
+    };
+    function stopHover() {
+      clearEdgeTimer();
+      clearLeaveTimer();
+      hoverOpened = false;
+    }
+    function onGuidePointerMove(event) {
+      if (!state?.settings.enabled || event.pointerType !== "mouse" ||
+          !window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ||
+          window.innerWidth < 960 || document.fullscreenElement) {
+        stopHover();
+        return;
+      }
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      const nearEdge = pointerX <= 72 && pointerY >= 56;
+      if (!hoverOpened && !guideOpen() && nearEdge) {
+        clearLeaveTimer();
+        if (!edgeTimer) edgeTimer = setTimeout(() => {
+          edgeTimer = null;
+          if (pointerX > 72 || pointerY < 56 || guideOpen() || !state?.settings.enabled) return;
+          const button = document.querySelector("ytd-masthead #guide-button button");
+          if (!button) return;
+          button.click(); // Use YouTube's own drawer instead of moving/replacing its DOM.
+          hoverOpened = true;
+        }, 180);
+        return;
+      }
+      clearEdgeTimer();
+      if (!hoverOpened) return; // Never auto-close a drawer opened manually.
+      const width = nativeDrawer()?.querySelector("#guide-wrapper")?.getBoundingClientRect().right || 240;
+      if (pointerX <= width + 12 && pointerY >= 56) { clearLeaveTimer(); return; }
+      if (!leaveTimer) leaveTimer = setTimeout(() => {
+        leaveTimer = null;
+        if (!hoverOpened) return;
+        const stillInside = pointerX <= (nativeDrawer()?.querySelector("#guide-wrapper")?.getBoundingClientRect().right || 240) + 12 && pointerY >= 56;
+        // Pointer departure closes even after clicking a guide action; a
+        // lingering focused button must not keep the hover drawer open forever.
+        if (stillInside) return;
+        if (guideOpen()) document.querySelector("ytd-masthead #guide-button button")?.click();
+        hoverOpened = false;
+      }, 450);
+    }
+    function onNativeGuideClick(event) {
+      if (event.isTrusted && event.target.closest?.("ytd-masthead #guide-button")) stopHover();
+    }
     function navLink(name, href, icon, selected = false) {
       return `<a class="cl-guide-item ${selected ? "cl-active" : ""}" href="${escapeHtml(href)}" ${selected ? 'aria-current="page"' : ''}><span class="cl-guide-dot">${glyph(icon)}</span><span class="cl-guide-name">${label(name)}</span></a>`;
     }
@@ -23,7 +79,7 @@
     ];
     function distractionMarkup() {
       const switches = distractionSettings.map(([name, setting]) => `<div class="cl-nav-setting-row"><span class="cl-nav-setting-label">${label(name)}</span><button class="cl-nav-switch" type="button" role="switch" data-cl-setting="${setting}" aria-label="${label(name)}" aria-checked="${Boolean(state.settings[setting])}"><span aria-hidden="true"></span></button></div>`).join("");
-      return `<details class="cl-nav-distractions" data-dom-key="nav-distractions"><summary><span>${label("減少干擾")}</span><span class="cl-nav-chevron" aria-hidden="true">⌄</span></summary><div class="cl-nav-distraction-list">${switches}</div></details><a class="cl-nav-support" href="https://buymeacoffee.com/tananis" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">☕</span><span>${label("支持與回饋 ↗")}</span></a>`;
+      return `<details class="cl-nav-distractions" data-dom-key="nav-distractions"><summary><span>${label("減少干擾")}</span>${disclosure()}</summary><div class="cl-nav-distraction-list">${switches}</div></details><a class="cl-nav-support" href="https://buymeacoffee.com/tananis" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">☕</span><span>${label("支持與回饋 ↗")}</span></a>`;
     }
     function nativeExploreLinks() {
       return [...document.querySelectorAll('ytd-guide-renderer #sections a[href]')].filter(a =>
@@ -38,7 +94,7 @@
         let href; try { const u = new URL(channel.url); if (u.hostname !== 'www.youtube.com' || !/^\/(?:@[^/]+|channel\/UC[\w-]+)$/.test(u.pathname)) return ''; href = u.pathname; } catch (_) { return ''; }
         return `<a class="cl-guide-item cl-nav-child" href="${escapeHtml(href)}"><span class="cl-guide-name" translate="no">${escapeHtml(channel.name)}</span></a>`;
       }).join('');
-return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${state.settings.blockHome ? '' : native('首頁', '/', 'home')}${explore ? `<button class="cl-guide-item" data-cl-action="toggle-explore" type="button" aria-expanded="${exploreExpanded}"><span class="cl-guide-dot">${glyph('explore')}</span><span class="cl-guide-name">${label('探索')}</span><span aria-hidden="true">${exploreExpanded ? '⌃' : '⌄'}</span></button><div ${exploreExpanded ? '' : 'hidden'}>${explore}</div>` : ''}${state.settings.hideShorts ? '' : native('Shorts', '/shorts/', 'shorts')}</div><div class="cl-nav-block">${native('觀看記錄', '/feed/history', 'history')}${native('稍後觀看', '/playlist?list=WL', 'clock')}${native('喜歡的影片', '/playlist?list=LL', 'heart')}${native('播放清單', '/feed/playlists', 'playlists')}</div><div class="cl-guide-heading"><button class="cl-nav-collection-link ${subscriptions.isCollections() ? 'cl-active' : ''}" data-cl-action="collections" type="button" ${subscriptions.isCollections() ? 'aria-current="page"' : ''}>${glyph('collections')}<span>${label('群組收藏')}</span></button><button class="cl-guide-toggle" data-cl-action="toggle-guide" type="button"><span aria-hidden="true">${glyph("chevron")}</span></button></div><div class="cl-guide-list">${groupButtons('cl-guide-item')}</div><div class="cl-nav-subscriptions"><div class="cl-nav-heading">${navAction('訂閱內容', 'subscriptions', 'subscriptions', isSubscriptionsPage() && !favorites.active() && !subscriptions.isCollections() && activeGroupId === 'all')}<button class="cl-nav-disclosure" data-cl-action="toggle-channels" type="button" aria-label="${label(channelsExpanded ? '收合訂閱頻道' : '展開訂閱頻道')}" aria-expanded="${channelsExpanded}">${channelsExpanded ? '⌃' : '⌄'}</button></div><div ${channelsExpanded ? '' : 'hidden'}><button class="cl-guide-item cl-nav-child" data-cl-group="unfiled" type="button" ${isSubscriptionsPage() && activeGroupId === 'unfiled' && !favorites.active() && !subscriptions.isCollections() ? 'aria-current="page"' : ''}><span class="cl-guide-name">${label('未分類')}</span><span class="cl-guide-count">${unfiledChannelIds().length}</span></button>${channels}${navAction('所有訂閱頻道', 'directory', 'subscriptions')}<div class="cl-favorite-entry">${navAction('最關注頻道', 'favorites', 'star', favorites.active())}</div></div></div><details class="cl-nav-settings" data-dom-key="nav-settings"><summary>${glyph("settings")}<span>Chanlume</span></summary><div>${navAction('更新訂閱內容', 'update-subscriptions', 'sparkles')}${navAction('群組與設定', 'manage', 'settings')}${distractionMarkup()}</div></details></nav>`;
+return `<nav class="cl-nav-shell" aria-label="${label('主要導覽')}"><div class="cl-nav-main"><div class="cl-nav-block">${state.settings.blockHome ? '' : native('首頁', '/', 'home')}${explore ? `<button class="cl-guide-item" data-cl-action="toggle-explore" type="button" aria-expanded="${exploreExpanded}"><span class="cl-guide-dot">${glyph('explore')}</span><span class="cl-guide-name">${label('探索')}</span>${disclosure()}</button><div ${exploreExpanded ? '' : 'hidden'}>${explore}</div>` : ''}${state.settings.hideShorts ? '' : native('Shorts', '/shorts/', 'shorts')}</div><div class="cl-nav-block">${native('觀看記錄', '/feed/history', 'history')}${native('稍後觀看', '/playlist?list=WL', 'clock')}${native('喜歡的影片', '/playlist?list=LL', 'heart')}${native('播放清單', '/feed/playlists', 'playlists')}</div><div class="cl-guide-heading"><button class="cl-nav-collection-link ${subscriptions.isCollections() ? 'cl-active' : ''}" data-cl-action="collections" type="button" ${subscriptions.isCollections() ? 'aria-current="page"' : ''}>${glyph('collections')}<span>${label('群組收藏')}</span></button><button class="cl-guide-toggle" data-cl-action="toggle-guide" type="button">${disclosure()}</button></div><div class="cl-guide-list">${groupButtons('cl-guide-item')}</div><div class="cl-nav-subscriptions"><div class="cl-nav-heading">${navAction('訂閱內容', 'subscriptions', 'subscriptions', isSubscriptionsPage() && !favorites.active() && !subscriptions.isCollections() && activeGroupId === 'all')}<button class="cl-nav-disclosure" data-cl-action="toggle-channels" type="button" aria-label="${label(channelsExpanded ? '收合訂閱頻道' : '展開訂閱頻道')}" aria-expanded="${channelsExpanded}">${disclosure()}</button></div><div ${channelsExpanded ? '' : 'hidden'}><button class="cl-guide-item cl-nav-child" data-cl-group="unfiled" type="button" ${isSubscriptionsPage() && activeGroupId === 'unfiled' && !favorites.active() && !subscriptions.isCollections() ? 'aria-current="page"' : ''}><span class="cl-guide-name">${label('未分類')}</span><span class="cl-guide-count">${unfiledChannelIds().length}</span></button>${channels}${navAction('所有訂閱頻道', 'directory', 'subscriptions')}<div class="cl-favorite-entry">${navAction('最關注頻道', 'favorites', 'star', favorites.active())}</div></div></div></div><div class="cl-nav-footer"><details class="cl-nav-settings" data-dom-key="nav-settings"><summary>${glyph("settings")}<span>Chanlume</span>${disclosure()}</summary><div>${navAction('更新訂閱內容', 'update-subscriptions', 'sparkles')}${navAction('群組與設定', 'manage', 'settings')}${distractionMarkup()}</div></details></div></nav>`;
     }
   function integratedSignature() {
     return JSON.stringify({
@@ -106,7 +162,9 @@ return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${s
     subscriptions.render();
     const signature = integratedSignature();
     const guide = document.getElementById("chanlume-guide-section");
-    if (guide && guide.dataset.signature !== signature) {
+    // YouTube may replace the section's children without replacing the
+    // signature-bearing host. Repair that state instead of leaving a blank guide.
+    if (guide && (guide.dataset.signature !== signature || !guide.querySelector(".cl-nav-shell"))) {
       guide.dataset.signature = signature;
       globalThis.ChanlumeDom.patch(guide, sidebarMarkup());
       localizeExtensionUi(guide);
@@ -193,6 +251,11 @@ return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${s
 
     return {
       clear() {
+        document.removeEventListener("pointermove", onGuidePointerMove, true);
+        document.removeEventListener("click", onNativeGuideClick, true);
+        document.removeEventListener("yt-navigate-start", stopHover);
+        window.removeEventListener("blur", stopHover);
+        stopHover();
         document.getElementById('chanlume-guide-section')?.remove();
         document.getElementById('chanlume-mini-guide')?.remove();
         document.querySelectorAll('.chanlume-guide-replaced, .chanlume-mini-replaced').forEach(node => node.classList.remove('chanlume-guide-replaced', 'chanlume-mini-replaced'));
@@ -201,6 +264,14 @@ return `<nav aria-label="${label('主要導覽')}"><div class="cl-nav-block">${s
       render() {
         state = context.getState();
         activeGroupId = context.getActiveGroup();
+        document.removeEventListener("pointermove", onGuidePointerMove, true);
+        document.addEventListener("pointermove", onGuidePointerMove, true);
+        document.removeEventListener("click", onNativeGuideClick, true);
+        document.addEventListener("click", onNativeGuideClick, true);
+        document.removeEventListener("yt-navigate-start", stopHover);
+        document.addEventListener("yt-navigate-start", stopHover);
+        window.removeEventListener("blur", stopHover);
+        window.addEventListener("blur", stopHover);
         renderIntegratedControls();
       }
     };
