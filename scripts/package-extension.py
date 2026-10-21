@@ -2,6 +2,7 @@
 import hashlib
 import json
 from pathlib import Path
+import re
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
@@ -45,7 +46,17 @@ def production_content(relative: Path) -> bytes:
         text = text.replace(callback, '')
         if any(name in text for name in ('DEV_RELOAD', 'CHANLUME_DEV_', 'refreshDevTabsAfterReload')):
             raise RuntimeError('Developer reload code remained in production')
-        return text.encode('utf-8')
+        previous_archive = root / 'outputs/Chanlume-1.23.3.zip'
+        trusted_hash = '1686a281a984f3828e2ca353a2e59ed8683c10e0d7412ed51c79f26f31ef04f2'
+        if hashlib.sha256(previous_archive.read_bytes()).hexdigest() != trusted_hash:
+            raise RuntimeError('Historical production archive checksum mismatch')
+        with zipfile.ZipFile(previous_archive) as verified:
+            baseline = verified.read('background.js')
+        def normalize_blank_lines(value: str) -> str:
+            return re.sub(r'(?m)^[\t ]*\r?\n', '', value).replace('\r\n', '\n')
+        if normalize_blank_lines(text) != normalize_blank_lines(baseline.decode('utf-8')):
+            raise RuntimeError('Production background differs from the reviewed historical source')
+        return baseline
     return contents
 
 payloads = {relative: production_content(relative) for relative in files}

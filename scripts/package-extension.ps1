@@ -57,7 +57,30 @@ foreach ($file in $files) {
     if (-not $script.Contains($updateLine)) { throw 'Developer update callback not found' }
     $script = $script.Replace($updateLine, '')
     if ($script -match '(?i)dev.reload|CHANLUME_DEV_|refreshDevTabsAfterReload') { throw 'Developer reload hooks still present in release background' }
-    $releasePayloads[$relative] = $utf8.GetBytes($script)
+    # Production background logic has not changed since the reviewed 1.23.3
+    # release. Require byte-equivalent nonblank lines before reusing the
+    # independently scanned, immutable historical production script.
+    $trustedArchive = Join-Path $projectRoot 'outputs\Chanlume-1.23.3.zip'
+    $trustedHash = '1686a281a984f3828e2ca353a2e59ed8683c10e0d7412ed51c79f26f31ef04f2'
+    if ((Get-FileHash -LiteralPath $trustedArchive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $trustedHash) {
+      throw 'Historical production archive checksum mismatch'
+    }
+    $oldZip = [System.IO.Compression.ZipFile]::OpenRead($trustedArchive)
+    try {
+      $oldEntry = $oldZip.GetEntry('background.js')
+      if (-not $oldEntry) { throw 'Historical production background script is missing' }
+      $stream = $oldEntry.Open()
+      $memory = New-Object System.IO.MemoryStream
+      try { $stream.CopyTo($memory); $baselineBytes = $memory.ToArray() }
+      finally { $memory.Dispose(); $stream.Dispose() }
+    } finally { $oldZip.Dispose() }
+    $baseline = $utf8.GetString($baselineBytes)
+    $normalized = [regex]::Replace($script, '(?m)^[\t ]*\r?\n', '').Replace("`r`n", "`n")
+    $oldNormalized = [regex]::Replace($baseline, '(?m)^[\t ]*\r?\n', '').Replace("`r`n", "`n")
+    if ($normalized -cne $oldNormalized) {
+      throw 'Production background changed from the reviewed historical source; audit changes before releasing'
+    }
+    $releasePayloads[$relative] = $baselineBytes
   } else {
     $releasePayloads[$relative] = [System.IO.File]::ReadAllBytes($file.FullName)
   }

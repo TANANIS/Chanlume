@@ -1,6 +1,6 @@
 # Chanlume
 
-> **Security notice (2026-10-21): Chanlume 1.24.0 download temporarily withdrawn.** Microsoft Defender detected `Trojan:Script/Ulthar.A!ml` in the 1.24.0 ZIP's `background.js` and also blocked the local production copy. This may be a false positive: compared with 1.23.3, the production background script has only whitespace differences, but safety has **not** been independently confirmed. Do not bypass antivirus warnings or upload/install the affected ZIP until this has been reviewed. The version tag is retained for investigation.
+> **Security notice (2026-10-21): Version 1.24.0 was withdrawn after a Microsoft Defender malware alert.** Version 1.24.1 was rebuilt with the scanned, byte-identical 1.23.3 production background script; local Defender rescans found no new detections. This is not a guarantee against future browser reputation flags or independent malware findings. Do not override antivirus warnings. The affected v1.24.0 tag remains only for forensic reference. See [security review](SECURITY_REVIEW_1.24.1.md).
 
 > **2026-10-21 sidebar refinement (main):** Collections, Subscriptions, Distraction settings and Chanlume settings now use a single 46px row rhythm and the same SVG chevron. The Chanlume settings trigger remains at the bottom of the expanded YouTube guide; opening it shows settings above the trigger while the independent main navigation scrolls in the remaining space. On a desktop with a fine mouse pointer, hovering within the left mini-guide edge briefly opens YouTube's native guide; moving into the page closes only the drawer opened by hover. A manually opened guide is never auto-closed. These changes are frontend-only and keep the native guide button, keyboard access, and saved library untouched.
 
@@ -25,7 +25,7 @@
 
 <img src="outputs/store-assets/screenshot-library-1280x800.png" alt="Chanlume subscription library with synthetic demo data" width="800">
 
-**Current GitHub version: 1.24.0.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
+**Current GitHub version: 1.24.1.** Chanlume uses YouTube's loaded Subscriptions feed as the sole source for its Feed and Timeline views and channel video previews. As you scroll, YouTube loads older cards and Chanlume updates its filters and presentation without querying each channel separately. The Channels directory retains your full locally synchronized subscription list regardless of how many videos are loaded. Your groups, favorites and settings remain local.
 
 The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, including a direct Timeline reload, multiple native infinite-scroll continuations, unique video IDs, full Channels directory and return to native Feed. It preserves YouTube's original subscription data flow and does not change the Home recommendation algorithm. See [technical validation](HANDOFF.md) for the exact checks and their limits.
 
@@ -41,9 +41,19 @@ The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, incl
 
 ## Download & install
 
-**Chanlume 1.24.0 download is temporarily unavailable pending investigation.** [Source tag v1.24.0 (historical reference only)](https://github.com/TANANIS/Chanlume/tree/v1.24.0)
+**[Download Chanlume 1.24.1](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.1.zip)** · [Source tag v1.24.1](https://github.com/TANANIS/Chanlume/tree/v1.24.1)
 
-**Chrome Web Store status:** do not submit the flagged 1.24.0 ZIP while the security detection is unresolved. It has not been submitted, approved or published.
+The previous **1.24.0** download was withdrawn following a Defender alert. Do not install 1.24.0 from its historical source tag. [1.24.1 security review](SECURITY_REVIEW_1.24.1.md).
+
+**Chrome Web Store status:** 1.24.1 is ready for developer submission after local checks; no Store upload, approval, or publication has occurred. If a downloaded copy is flagged, stop and report it instead of overriding protection.
+
+Version 1.24.1 ZIP SHA-256: `438155c9c0afa0da52f73ce74b376eeadc25ec7cb7173b3d4a77d7f041bcae77`.
+
+### What's new in 1.24.1
+
+- Reproducible production rebuild with the previously reviewed, byte-identical 1.23.3 background script.
+- Checks that developer-only reload code stays out of the release archive.
+- Defender custom scans of the new ZIP, background script and production files completed without additional detections. See the [security review](SECURITY_REVIEW_1.24.1.md). This does not guarantee acceptance by Helium's reputation system.
 
 Version 1.24.0 ZIP SHA-256: `71212c6cef1756b95e02e6c1a6e6656a6daacabf6515e598f4e3f15ba4cca325`.
 
@@ -99,9 +109,9 @@ Historical 1.19.4 package SHA-256: `446118680dc3279d8e71814eab874d79ba7bec426389
 
 The currently published extension is available from the [Chrome Web Store](https://chromewebstore.google.com/detail/agnnbehkdkdkflknblhkmgciaekngole?utm_source=item-share-cb).
 
-Manual installation from the 1.24.0 ZIP is paused while its Defender detection is being investigated. Do not override Windows security warnings. Once a verified package is available, the usual steps are:
+Manual installation of **1.24.0 remains suspended**. For the independently rebuilt 1.24.1 package, use the steps below. Never override browser or antivirus warnings; if blocked, stop and report the detection.
 
-1. Download the verified ZIP from the release's current download link.
+1. Download the current 1.24.1 ZIP from the link above, without overriding any security warnings.
 2. Extract the ZIP file.
 3. Open `chrome://extensions/`.
 4. Enable **Developer mode**.
