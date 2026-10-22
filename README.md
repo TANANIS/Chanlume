@@ -43,13 +43,15 @@ The installed 1.23.3 version passed signed-in Helium testing on 2026-10-20, incl
 
 ## Download & install
 
-**[Download Chanlume 1.24.2](https://github.com/TANANIS/Chanlume/raw/refs/heads/main/outputs/Chanlume-1.24.2.zip)** · [Previous audited source tag v1.24.1](https://github.com/TANANIS/Chanlume/tree/v1.24.1)
+**[Download Chanlume 1.24.2](https://github.com/TANANIS/Chanlume/raw/refs/tags/v1.24.2/outputs/Chanlume-1.24.2.zip)** · [Source tag v1.24.2](https://github.com/TANANIS/Chanlume/tree/v1.24.2) · [Previous audited source tag v1.24.1](https://github.com/TANANIS/Chanlume/tree/v1.24.1)
 
 The previous **1.24.0** download was withdrawn following a Defender alert. Do not install 1.24.0 from its historical source tag. [1.24.1 security review](SECURITY_REVIEW_1.24.1.md).
 
 **Chrome Web Store status:** 1.24.2 is packaged for a future developer submission, but no Store upload, approval, or publication is claimed. If a downloaded copy is flagged, stop and report it instead of overriding protection.
 
 Version 1.24.2 ZIP SHA-256: `51fe4fd050c3e12a179fe1ef2ca3c3d5395a30337528162b5cd82fe387e881c2`.
+
+The annotated release tag **`v1.24.2`** fixes this version's source and package to commit [`7922ceb`](https://github.com/TANANIS/Chanlume/commit/7922ceb27027c1d28399914cd4a78e7b2ca4c617); the download link above uses that immutable version tag instead of the moving `main` branch. The Chrome Web Store remains a separate submission and review process.
 
 ### What's new in 1.24.2
 
